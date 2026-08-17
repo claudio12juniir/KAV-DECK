@@ -1,0 +1,85 @@
+/*
+  Tokens da identidade KAV — preto e branco como base inegociável da marca;
+  o azul (#40DFE8) é usado com extrema economia, só em pontos de decisão
+  (ação primária, item ativo, foco, destaque pontual). Nada de paleta colorida
+  "SaaS genérico": todo neutro deriva de preto/branco por opacidade, não de
+  tons de cinza soltos, para o preto-e-branco se manter consistente em toda
+  a superfície do produto.
+*/
+:root {
+  /* Neutros — sempre derivados de preto (0,0,0) ou branco (255,255,255) */
+  --color-bg: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-sunken: rgba(0, 0, 0, 0.03);
+  --color-surface-raised: #FFFFFF;
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-strong: rgba(0, 0, 0, 0.22);
+  --color-text: #0A0A0A;
+  --color-text-muted: rgba(10, 10, 10, 0.58);
+  --color-text-faint: rgba(10, 10, 10, 0.38);
+
+  /* Marca — único tom de contraste do sistema, reservado para ações
+     primárias, item ativo e foco. Não usar como cor de preenchimento geral. */
+  --color-accent: #40DFE8;
+  --color-accent-hover: #22C6D0;
+  --color-accent-soft: rgba(64, 223, 232, 0.12);
+  --color-accent-line: rgba(64, 223, 232, 0.35);
+  --color-accent-glow: rgba(64, 223, 232, 0.45);
+  --color-on-accent: #050505;
+
+  /* Semânticos — restritos a badges/indicadores de status de negócio
+     (bloqueio financeiro, títulos vencidos); nunca usados como cor de
+     interface, só como sinal pontual sobre o fundo preto/branco. */
+  --color-success: #16A34A;
+  --color-success-soft: rgba(22, 163, 74, 0.1);
+  --color-warning: #D97706;
+  --color-warning-soft: rgba(217, 119, 6, 0.1);
+  --color-danger: #DC2626;
+  --color-danger-soft: rgba(220, 38, 38, 0.1);
+  --color-neutral-soft: rgba(10, 10, 10, 0.06);
+
+  /* Forma */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --shadow-sm: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 16px 56px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 0 1px var(--color-accent-line), 0 24px 64px -12px var(--color-accent-glow);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-fluid: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Espaçamento — escala única usada em todo o app */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Tipografia — escala levemente reduzida e com tracking cuidado, o
+     mesmo tratamento tipográfico da KAV SITE (Inter, títulos com
+     letter-spacing negativo, rótulos em caixa alta com tracking positivo) */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Inter", ui-monospace, "SF Mono", monospace;
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.875rem;
+  --text-display: 3rem;
+  --text-hero: 5rem;
+  --tracking-tight: -0.02em;
+  --tracking-wide: 0.08em;
+
+  /* Navegação (topbar preta pura — âncora da marca, único ponto de preto
+     sólido fora do texto) */
+  --color-nav-bg: #000000;
+  --color-nav-surface: #0F0F0F;
+  --color-nav-text: rgba(255, 255, 255, 0.66);
+  --color-nav-text-active: #FFFFFF;
+  --color-nav-border: rgba(255, 255, 255, 0.1);
+}

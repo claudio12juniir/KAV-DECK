@@ -1,0 +1,92 @@
+.data-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  text-align: left;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table td {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr.clickable {
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+.data-table tr.clickable:hover {
+  background: var(--color-surface-sunken);
+}
+
+.data-table-empty {
+  padding: var(--space-6) 0;
+  text-align: center;
+  color: var(--color-text-faint);
+}
+
+/* Em telas estreitas, a tabela vira uma lista de cards — nenhum usuário
+   precisa rolar horizontalmente para ler um pedido no celular. */
+@media (max-width: 720px) {
+  .data-table-wrap {
+    border: none;
+    background: transparent;
+  }
+  .data-table thead {
+    display: none;
+  }
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+    width: 100%;
+  }
+  .data-table tr {
+    margin-bottom: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-surface);
+  }
+  .data-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    text-align: right;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .data-table td:last-child {
+    border-bottom: none;
+  }
+  .data-table td::before {
+    content: attr(data-label);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+    text-align: left;
+  }
+}

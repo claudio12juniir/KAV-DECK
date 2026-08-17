@@ -1,0 +1,53 @@
+name: Build desktop installers
+
+# Builda o app Electron nativamente em cada SO (evita precisar de Wine para
+# gerar o instalador Windows a partir de um Mac). Rode manualmente pela aba
+# "Actions" do GitHub (workflow_dispatch) sempre que quiser gerar uma nova
+# versão dos instaladores.
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "desktop-v*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            script: dist:mac
+            artifact-name: kav-deck-macos
+            artifact-path: |
+              electron/release/*.dmg
+              electron/release/*.zip
+          - os: windows-latest
+            script: dist:win
+            artifact-name: kav-deck-windows
+            artifact-path: |
+              electron/release/*.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependências do frontend
+        working-directory: web
+        run: npm ci
+
+      - name: Instalar dependências do Electron
+        working-directory: electron
+        run: npm ci
+
+      - name: Build (frontend + instalador)
+        working-directory: electron
+        run: npm run ${{ matrix.script }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-path }}
+          if-no-files-found: error

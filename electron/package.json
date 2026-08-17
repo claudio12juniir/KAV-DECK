@@ -1,0 +1,60 @@
+{
+  "name": "kav-deck-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KAV DECK - cliente desktop (Electron)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env ELECTRON_START_URL=http://localhost:5173 electron .",
+    "build:web": "npm --prefix ../web run build",
+    "dist:mac": "npm run build:web && electron-builder --mac",
+    "dist:win": "npm run build:web && electron-builder --win",
+    "dist:all": "npm run build:web && electron-builder --mac --win"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "br.com.kavdeck.desktop",
+    "productName": "KAV DECK",
+    "copyright": "Copyright (c) KAV DECK",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "settings.html",
+      "settings-preload.js",
+      "default-config.json",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "../web/dist", "to": "web-dist" }
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
+      ]
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "KAV DECK"
+    }
+  }
+}
