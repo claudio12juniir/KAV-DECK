@@ -13,6 +13,7 @@ export function NaturezasOperacaoPage() {
       title="Naturezas de operação"
       description="Usadas para classificar cada nota fiscal emitida."
       api={naturezasOperacaoApi}
+      resource="/fiscal/naturezas-operacao"
       fields={fields}
       columns={[{ key: "descricao", label: "Descrição" }]}
     />

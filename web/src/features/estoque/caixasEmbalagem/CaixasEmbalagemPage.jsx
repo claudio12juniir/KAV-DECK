@@ -19,6 +19,7 @@ export function CaixasEmbalagemPage() {
       title="Caixas e embalagens"
       description="Controle de comodato de paletes e caixas plásticas com clientes e fornecedores."
       api={caixasEmbalagemApi}
+      resource="/estoque/caixas-embalagem"
       fields={fields}
       columns={columns}
     />

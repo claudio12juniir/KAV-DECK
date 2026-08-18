@@ -6,6 +6,7 @@ import { Modal } from "../../../components/ui/Modal.jsx";
 import { Select } from "../../../components/ui/Select.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { criarMovimentoCaixa, listMovimentosCaixa } from "./api.js";
 
 function formatarData(iso) {
@@ -42,6 +43,8 @@ export function CaixaPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeInvalidate("/financeiro/caixa/movimentos", carregar);
 
   async function handleSalvar(e) {
     e.preventDefault();

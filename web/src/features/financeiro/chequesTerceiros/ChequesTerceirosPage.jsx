@@ -5,6 +5,7 @@ import { Input } from "../../../components/ui/Input.jsx";
 import { Modal } from "../../../components/ui/Modal.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { ParticipanteAutocomplete } from "../../shared/ParticipanteAutocomplete.jsx";
 import { atualizarStatusChequeTerceiro, criarChequeTerceiro, listChequesTerceiros } from "./api.js";
 
@@ -42,6 +43,8 @@ export function ChequesTerceirosPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeInvalidate("/financeiro/cheques-terceiros", carregar);
 
   function fecharModal() {
     setModalAberto(false);

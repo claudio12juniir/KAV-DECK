@@ -9,6 +9,7 @@ export function GruposEmpresasPage() {
       title="Grupos de empresas"
       description="Agrupa participantes para consolidar limite de crédito."
       api={gruposEmpresasApi}
+      resource="/participantes/grupos-empresas"
       fields={fields}
     />
   );

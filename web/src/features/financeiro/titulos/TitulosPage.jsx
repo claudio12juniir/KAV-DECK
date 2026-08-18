@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Select } from "../../../components/ui/Select.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { listTitulos } from "./api.js";
 import { StatusTituloBadge } from "./StatusTituloBadge.jsx";
 
@@ -21,6 +22,7 @@ export function TitulosPage() {
   const [carregando, setCarregando] = useState(true);
   const [tipo, setTipo] = useState("");
   const [status, setStatus] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let ativo = true;
@@ -37,7 +39,9 @@ export function TitulosPage() {
       ativo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipo, status]);
+  }, [tipo, status, refreshKey]);
+
+  useRealtimeInvalidate("/financeiro/titulos", () => setRefreshKey((k) => k + 1));
 
   const columns = [
     { key: "tipo", label: "Tipo", render: (row) => (row.tipo === "PAGAR" ? "A pagar" : "A receber") },

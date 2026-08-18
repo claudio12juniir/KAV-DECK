@@ -6,6 +6,7 @@ import { Modal } from "../../components/ui/Modal.jsx";
 import { SkeletonLines } from "../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../components/ui/Table.jsx";
 import { useToast } from "../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
 import { getPedidoCompra, updatePedidoCompraStatus } from "./api.js";
 import { StatusBadge } from "./components/StatusBadge.jsx";
 
@@ -52,6 +53,8 @@ export function PedidoCompraDetailPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useRealtimeInvalidate("/compras/pedidos", carregar);
 
   async function aplicarTransicao(novoStatus) {
     setTransicaoEmAndamento(novoStatus);

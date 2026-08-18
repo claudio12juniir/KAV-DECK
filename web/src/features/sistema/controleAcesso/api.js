@@ -8,3 +8,8 @@ export const controleAcessoApi = {
   removerOverride: (usuarioId, modulo, acao) =>
     apiClient.delete(`/sistema/controle-acesso/${usuarioId}/${modulo}/${acao}`),
 };
+
+export const sessoesApi = {
+  listar: () => apiClient.get("/sistema/sessoes"),
+  revogar: (usuarioId) => apiClient.delete(`/sistema/sessoes/${usuarioId}`),
+};

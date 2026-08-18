@@ -13,6 +13,7 @@ export function RotasEntregaPage() {
       title="Rotas de entrega"
       description="Usadas nos pedidos de venda para organizar a entrega."
       api={rotasEntregaApi}
+      resource="/participantes/rotas-entrega"
       fields={fields}
     />
   );

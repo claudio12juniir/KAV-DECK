@@ -3,6 +3,7 @@ import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { atualizarBloqueio, listClientes } from "./api.js";
 
 export function ClientesPage() {
@@ -27,6 +28,8 @@ export function ClientesPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeInvalidate("/participantes/clientes", carregar);
 
   async function alternarBloqueio(cliente) {
     const novoStatus = cliente.bloqueioFinanceiro === "BLOQUEADO" ? "LIBERADO" : "BLOQUEADO";

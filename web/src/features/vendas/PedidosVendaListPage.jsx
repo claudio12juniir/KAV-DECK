@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button.jsx";
 import { Select } from "../../components/ui/Select.jsx";
 import { DataTable } from "../../components/ui/Table.jsx";
 import { useToast } from "../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
 import { listPedidosVenda } from "./api.js";
 import { StatusBadge } from "./components/StatusBadge.jsx";
 
@@ -17,6 +18,7 @@ export function PedidosVendaListPage() {
   const [pedidos, setPedidos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [status, setStatus] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let ativo = true;
@@ -33,7 +35,9 @@ export function PedidosVendaListPage() {
       ativo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [status, refreshKey]);
+
+  useRealtimeInvalidate("/vendas/pedidos", () => setRefreshKey((k) => k + 1));
 
   const columns = [
     { key: "cliente", label: "Cliente", render: (row) => row.cliente.participante.razaoSocial },

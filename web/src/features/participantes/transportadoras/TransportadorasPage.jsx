@@ -13,6 +13,7 @@ export function TransportadorasPage() {
       title="Transportadoras"
       description="Usadas nas rotas de entrega."
       api={transportadorasApi}
+      resource="/participantes/transportadoras"
       fields={fields}
     />
   );

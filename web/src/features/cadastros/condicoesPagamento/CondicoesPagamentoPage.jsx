@@ -13,6 +13,7 @@ export function CondicoesPagamentoPage() {
       title="Condições de pagamento"
       description="Usadas em pedidos de compra e venda para gerar os títulos."
       api={condicoesPagamentoApi}
+      resource="/cadastros/condicoes-pagamento"
       fields={fields}
     />
   );

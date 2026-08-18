@@ -7,6 +7,7 @@ import { Modal } from "../../../components/ui/Modal.jsx";
 import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { baixarTitulo, cancelarTitulo, getTitulo } from "./api.js";
 import { StatusTituloBadge } from "./StatusTituloBadge.jsx";
 
@@ -46,6 +47,8 @@ export function TituloDetailPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useRealtimeInvalidate("/financeiro/titulos", carregar);
 
   async function handleBaixar(e) {
     e.preventDefault();

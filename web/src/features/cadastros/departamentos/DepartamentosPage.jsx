@@ -12,6 +12,7 @@ export function DepartamentosPage() {
       title="Departamentos"
       description="Agrupamento de categorias de produtos."
       api={departamentosApi}
+      resource="/cadastros/departamentos"
       fields={fields}
     />
   );

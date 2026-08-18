@@ -7,6 +7,7 @@ import { Modal } from "../../../components/ui/Modal.jsx";
 import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { addManifestacao, getNotaFiscal, updateNotaFiscalStatus } from "./api.js";
 import { StatusNotaBadge } from "./StatusNotaBadge.jsx";
 
@@ -69,6 +70,8 @@ export function NotaFiscalDetailPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useRealtimeInvalidate("/fiscal/notas", carregar);
 
   async function aplicarTransicao(status, chave) {
     setTransicaoEmAndamento(status);

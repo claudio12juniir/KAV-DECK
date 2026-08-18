@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
 import { Button } from "../ui/Button.jsx";
 import { Input } from "../ui/Input.jsx";
 import { Modal } from "../ui/Modal.jsx";
@@ -17,7 +18,16 @@ function valorInicial(fields) {
 // usar para entidades com relações/regras específicas (Produto, Participante,
 // TabelaPreco, Título, NotaFiscal têm páginas próprias) — isso aqui é só
 // para os cadastros que de fato são "a mesma receita".
-export function SimpleCrudManager({ title, description, api, fields, columns, idField = "id", searchable = false }) {
+export function SimpleCrudManager({
+  title,
+  description,
+  api,
+  resource,
+  fields,
+  columns,
+  idField = "id",
+  searchable = false,
+}) {
   const toast = useToast();
   const [itens, setItens] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -51,6 +61,8 @@ export function SimpleCrudManager({ title, description, api, fields, columns, id
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busca]);
+
+  useRealtimeInvalidate(resource, () => carregar(searchable ? busca.trim() || undefined : undefined));
 
   useEffect(() => {
     fields.forEach((field) => {

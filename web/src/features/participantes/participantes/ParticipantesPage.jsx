@@ -75,6 +75,7 @@ export function ParticipantesPage() {
       title="Participantes"
       description="Cadastro-base de clientes e fornecedores. Depois de criado, promova para cliente e/ou fornecedor."
       api={participantesApi}
+      resource="/participantes"
       fields={fields}
       columns={columns}
       searchable

@@ -12,6 +12,7 @@ export function CentrosCustoPage() {
       title="Centros de custo"
       description="Usados para rateio de despesas nos relatórios financeiros."
       api={centrosCustoApi}
+      resource="/financeiro/centros-custo"
       fields={fields}
     />
   );

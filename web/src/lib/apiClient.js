@@ -1,3 +1,5 @@
+import { getSessionId } from "./sessionId.js";
+import { getSocketId } from "./socketClient.js";
 import { supabase } from "./supabaseClient.js";
 
 // No app desktop (Electron), a URL do backend é injetada em runtime pelo
@@ -29,6 +31,12 @@ async function request(path, { method = "GET", body, query } = {}) {
     }
   }
 
+  // Identifica o socket de quem fez a requisição para que o servidor não
+  // ecoe de volta o evento de invalidação da própria mutação que este
+  // fetch acabou de causar (ver src/middlewares/realtimeInvalidate.js).
+  const socketId = getSocketId();
+  const sessionId = getSessionId();
+
   let response;
   try {
     response = await fetch(url, {
@@ -36,6 +44,8 @@ async function request(path, { method = "GET", body, query } = {}) {
       headers: {
         "Content-Type": "application/json",
         ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        ...(socketId ? { "X-Socket-Id": socketId } : {}),
+        ...(sessionId ? { "X-Session-Id": sessionId } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
@@ -55,6 +65,15 @@ async function request(path, { method = "GET", body, query } = {}) {
 
   if (!response.ok) {
     const errorInfo = payload?.error ?? {};
+
+    // apiClient é um módulo puro (sem acesso a contexto React), então o
+    // aviso de sessão encerrada por outro dispositivo sobe como evento do
+    // browser — quem trata de verdade (signOut, mensagem na tela) é o
+    // AuthContext, que escuta esse evento.
+    if (errorInfo.code === "SESSION_REVOKED") {
+      window.dispatchEvent(new CustomEvent("kav-session-revoked", { detail: { message: errorInfo.message } }));
+    }
+
     throw new ApiError({
       status: response.status,
       code: errorInfo.code ?? "UNKNOWN_ERROR",

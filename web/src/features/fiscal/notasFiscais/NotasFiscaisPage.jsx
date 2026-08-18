@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Select } from "../../../components/ui/Select.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { listNotasFiscais } from "./api.js";
 import { StatusNotaBadge } from "./StatusNotaBadge.jsx";
 
@@ -22,6 +23,7 @@ export function NotasFiscaisPage() {
   const [carregando, setCarregando] = useState(true);
   const [tipoOperacao, setTipoOperacao] = useState("");
   const [status, setStatus] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let ativo = true;
@@ -38,7 +40,9 @@ export function NotasFiscaisPage() {
       ativo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipoOperacao, status]);
+  }, [tipoOperacao, status, refreshKey]);
+
+  useRealtimeInvalidate("/fiscal/notas", () => setRefreshKey((k) => k + 1));
 
   const columns = [
     { key: "serieNumero", label: "Nota", render: (row) => `${row.serie}/${row.numero}` },

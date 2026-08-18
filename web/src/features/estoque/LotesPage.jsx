@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { DataTable } from "../../components/ui/Table.jsx";
 import { useToast } from "../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
 import { listLotes } from "./api.js";
 
 function formatarData(iso) {
@@ -11,6 +12,7 @@ export function LotesPage() {
   const toast = useToast();
   const [lotes, setLotes] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let ativo = true;
@@ -26,7 +28,9 @@ export function LotesPage() {
       ativo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshKey]);
+
+  useRealtimeInvalidate("/estoque/lotes", () => setRefreshKey((k) => k + 1));
 
   const columns = [
     { key: "produto", label: "Produto", render: (row) => `${row.produto.descricao} (${row.produto.codigo})` },

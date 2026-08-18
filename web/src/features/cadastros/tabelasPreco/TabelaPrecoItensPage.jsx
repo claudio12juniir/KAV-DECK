@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Card } from "../../../components/ui/Card.jsx";
 import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { ProdutoAutocomplete } from "../../shared/ProdutoAutocomplete.jsx";
 import { getTabelaPreco, removeItemTabelaPreco, upsertItemTabelaPreco } from "./api.js";
 
@@ -29,6 +30,8 @@ export function TabelaPrecoItensPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useRealtimeInvalidate("/cadastros/tabelas-preco", carregar);
 
   async function adicionarProduto(produto) {
     try {

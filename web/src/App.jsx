@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell.jsx";
-import { ToastProvider } from "./components/ui/Toast.jsx";
+import { ToastProvider, useToast } from "./components/ui/Toast.jsx";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
+import { RealtimeProvider } from "./contexts/RealtimeContext.jsx";
 import { CategoriasPage } from "./features/cadastros/categorias/CategoriasPage.jsx";
 import { CondicoesPagamentoPage } from "./features/cadastros/condicoesPagamento/CondicoesPagamentoPage.jsx";
 import { DepartamentosPage } from "./features/cadastros/departamentos/DepartamentosPage.jsx";
@@ -48,7 +50,15 @@ import { PedidosVendaListPage } from "./features/vendas/PedidosVendaListPage.jsx
 import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
 
 function AppRoutes() {
-  const { session, loading } = useAuth();
+  const { session, loading, sessaoEncerradaMotivo, limparAvisoSessaoEncerrada } = useAuth();
+  const toast = useToast();
+
+  useEffect(() => {
+    if (!sessaoEncerradaMotivo) return;
+    toast.error(sessaoEncerradaMotivo, { duration: 8000 });
+    limparAvisoSessaoEncerrada();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessaoEncerradaMotivo]);
 
   if (loading) return null;
 
@@ -119,9 +129,11 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <ToastProvider>
-          <AppRoutes />
-        </ToastProvider>
+        <RealtimeProvider>
+          <ToastProvider>
+            <AppRoutes />
+          </ToastProvider>
+        </RealtimeProvider>
       </AuthProvider>
     </Router>
   );

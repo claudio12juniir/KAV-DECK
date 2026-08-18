@@ -6,6 +6,7 @@ import { Modal } from "../../../components/ui/Modal.jsx";
 import { Select } from "../../../components/ui/Select.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { listContasBancariasOptions } from "../contasBancarias/api.js";
 import { atualizarStatusChequeEmitido, criarChequeEmitido, listChequesEmitidos } from "./api.js";
 
@@ -45,6 +46,8 @@ export function ChequesEmitidosPage() {
     listContasBancariasOptions().then(setContas);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeInvalidate("/financeiro/cheques-emitidos", carregar);
 
   async function handleSalvar(e) {
     e.preventDefault();

@@ -24,6 +24,7 @@ export function ColaboradoresPage() {
       title="Colaboradores"
       description="Compradores, vendedores, representantes e separadores vinculados a pedidos."
       api={colaboradoresApi}
+      resource="/participantes/colaboradores"
       fields={fields}
     />
   );

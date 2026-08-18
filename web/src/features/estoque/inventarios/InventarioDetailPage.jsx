@@ -6,6 +6,7 @@ import { Modal } from "../../../components/ui/Modal.jsx";
 import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { fecharInventario, getInventario } from "./api.js";
 
 export function InventarioDetailPage() {
@@ -33,6 +34,8 @@ export function InventarioDetailPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useRealtimeInvalidate("/estoque/inventarios", carregar);
 
   async function handleFechar() {
     setFechando(true);

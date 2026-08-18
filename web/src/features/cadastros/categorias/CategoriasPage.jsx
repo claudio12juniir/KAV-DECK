@@ -19,6 +19,7 @@ export function CategoriasPage() {
       title="Categorias"
       description="Usadas para classificar os produtos e nos relatórios de curva ABC."
       api={categoriasApi}
+      resource="/cadastros/categorias"
       fields={fields}
       columns={columns}
     />

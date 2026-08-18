@@ -6,9 +6,14 @@ import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
-import { controleAcessoApi } from "./api.js";
+import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { controleAcessoApi, sessoesApi } from "./api.js";
 
 const PAPEIS_COM_ACESSO = ["ADMIN", "GESTOR"];
+
+function formatarDataHora(iso) {
+  return new Date(iso).toLocaleString("pt-BR");
+}
 
 function EfetivaBadge({ acao }) {
   if (acao.override !== null) {
@@ -34,21 +39,60 @@ export function ControleAcessoPage() {
   const [detalhe, setDetalhe] = useState(null);
   const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
   const [acaoEmAndamento, setAcaoEmAndamento] = useState(null);
+  const [sessoes, setSessoes] = useState([]);
+  const [carregandoSessoes, setCarregandoSessoes] = useState(true);
+  const [revogandoUsuarioId, setRevogandoUsuarioId] = useState(null);
 
   const temAcesso = PAPEIS_COM_ACESSO.includes(me?.role);
+
+  function carregarUsuarios() {
+    return controleAcessoApi
+      .listarUsuarios()
+      .then(({ items }) => setUsuarios(items))
+      .catch((err) => toast.error(err.message ?? "Não foi possível carregar os usuários."));
+  }
+
+  function carregarSessoes() {
+    return sessoesApi
+      .listar()
+      .then(({ items }) => setSessoes(items))
+      .catch((err) => toast.error(err.message ?? "Não foi possível carregar as sessões ativas."));
+  }
 
   useEffect(() => {
     if (!temAcesso) {
       setCarregandoUsuarios(false);
+      setCarregandoSessoes(false);
       return;
     }
-    controleAcessoApi
-      .listarUsuarios()
-      .then(({ items }) => setUsuarios(items))
-      .catch((err) => toast.error(err.message ?? "Não foi possível carregar os usuários."))
-      .finally(() => setCarregandoUsuarios(false));
+    carregarUsuarios().finally(() => setCarregandoUsuarios(false));
+    carregarSessoes().finally(() => setCarregandoSessoes(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [temAcesso]);
+
+  useRealtimeInvalidate("/sistema/controle-acesso", () => {
+    carregarUsuarios();
+    if (usuarioSelecionado) selecionar(usuarioSelecionado);
+  });
+
+  // Sessão ativa muda tanto por revogação (POST /sistema/sessoes/:id) quanto
+  // por um login novo em outro dispositivo (POST /me/sessao) — assina os
+  // dois pra este painel não ficar defasado em nenhum dos dois casos.
+  useRealtimeInvalidate("/sistema/sessoes", carregarSessoes);
+  useRealtimeInvalidate("/me/sessao", carregarSessoes);
+
+  async function encerrarSessao(usuario) {
+    setRevogandoUsuarioId(usuario.usuarioId);
+    try {
+      await sessoesApi.revogar(usuario.usuarioId);
+      toast.success(`Sessão de ${usuario.usuario.nome} encerrada.`);
+      await carregarSessoes();
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível encerrar essa sessão.");
+    } finally {
+      setRevogandoUsuarioId(null);
+    }
+  }
 
   async function selecionar(usuario) {
     setUsuarioSelecionado(usuario);
@@ -130,6 +174,41 @@ export function ControleAcessoPage() {
           loading={carregandoUsuarios}
           onRowClick={selecionar}
           emptyMessage="Nenhum usuário encontrado."
+        />
+      </Card>
+
+      <Card style={{ marginBottom: "24px" }}>
+        <h3>Sessões ativas</h3>
+        <p style={{ color: "var(--color-text-muted)", marginBottom: "16px" }}>
+          Cada usuário só pode estar logado em um dispositivo por vez — entrar em outro encerra
+          automaticamente o anterior. Use "Encerrar sessão" para forçar o logout de alguém sem
+          esperar isso acontecer.
+        </p>
+        <DataTable
+          columns={[
+            { key: "usuario", label: "Usuário", render: (row) => `${row.usuario.nome} (${row.usuario.email})` },
+            { key: "dispositivo", label: "Dispositivo", render: (row) => row.dispositivo ?? "—" },
+            { key: "criadaEm", label: "Desde", render: (row) => formatarDataHora(row.criadaEm) },
+            { key: "ultimoAcessoEm", label: "Último acesso", render: (row) => formatarDataHora(row.ultimoAcessoEm) },
+            {
+              key: "_acoes",
+              label: "",
+              render: (row) => (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  loading={revogandoUsuarioId === row.usuarioId}
+                  disabled={Boolean(revogandoUsuarioId)}
+                  onClick={() => encerrarSessao(row)}
+                >
+                  Encerrar sessão
+                </Button>
+              ),
+            },
+          ]}
+          rows={sessoes}
+          loading={carregandoSessoes}
+          emptyMessage="Nenhuma sessão ativa no momento."
         />
       </Card>
 

@@ -38,6 +38,7 @@ export function ProdutosPage() {
       title="Produtos"
       description="Catálogo de produtos usado em pedidos de compra e venda."
       api={produtosApi}
+      resource="/cadastros/produtos"
       fields={fields}
       columns={columns}
       searchable
