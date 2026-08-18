@@ -1,0 +1,58 @@
+name: Build mobile app (EAS)
+
+# Builda o app Expo/React Native na nuvem via EAS Build — não depende de Mac
+# nem de Android Studio instalado localmente. Exige o secret EXPO_TOKEN
+# (Expo account settings > Access tokens) configurado no repositório em
+# Settings > Secrets and variables > Actions antes de rodar.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Perfil do eas.json"
+        required: true
+        default: preview
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+      platform:
+        description: "Plataforma"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+  push:
+    tags:
+      - "mobile-v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependências
+        working-directory: mobile
+        run: npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build via EAS
+        working-directory: mobile
+        run: |
+          eas build \
+            --platform ${{ github.event.inputs.platform || 'all' }} \
+            --profile ${{ github.event.inputs.profile || 'preview' }} \
+            --non-interactive \
+            --no-wait

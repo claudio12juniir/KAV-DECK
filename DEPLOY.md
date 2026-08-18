@@ -38,6 +38,20 @@ Suba com Docker ou PM2 rodando `npm start` atrás de um proxy HTTPS (Caddy ou
 Nginx + Let's Encrypt). Não incluí Dockerfile neste repositório ainda — se
 optar por essa rota, me avise que eu preparo.
 
+⚠️ Desde o Sprint 9, o backend também serve Socket.io (motor de tempo real)
+no mesmo servidor HTTP, no path `/socket.io`. Railway e Render já suportam
+WebSocket sem configuração extra. Numa VPS com Nginx na frente, o bloco do
+proxy precisa repassar o upgrade de conexão, senão o tempo real cai para
+polling (funciona, mas fica mais lento):
+```
+location /socket.io/ {
+  proxy_pass http://localhost:3000;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection "upgrade";
+}
+```
+
 ⚠️ O backend **precisa estar em HTTPS** em produção (não HTTP puro), porque
 o app desktop empacotado carrega o frontend via `file://`, e navegadores/
 Electron bloqueiam requisições de origem `file://` para `http://` externo
@@ -131,3 +145,60 @@ eu consiga adquirir por você.
 - `web/src/lib/apiClient.js` — já preparado para usar a URL configurada
   pelo app desktop em runtime, sem precisar rebuildar o instalador toda vez
   que o endereço do backend mudar.
+
+---
+
+## 6. App mobile (Expo/React Native) — build via EAS
+
+O app mobile (`mobile/`) usa **EAS Build**, o serviço de build na nuvem da
+própria Expo — não precisa de Mac com Xcode nem Android Studio instalados
+pra gerar os instaladores (`.ipa`/`.apk`/`.aab`). Já deixei tudo configurado
+no repositório (`mobile/eas.json`, `mobile/app.json`,
+`.github/workflows/build-mobile.yml`), mas **três coisas dependem de você**,
+porque exigem uma conta que eu não tenho como criar:
+
+1. **Conta na Expo** (expo.dev, gratuita pra começar) e rodar, uma vez, na
+   sua máquina:
+   ```
+   cd mobile
+   npx eas-cli login
+   npx eas-cli init
+   ```
+   O `init` vincula o projeto à sua conta e preenche
+   `expo.extra.eas.projectId` no `app.json` — sem isso nenhum build roda.
+
+2. **Identificadores do app**: coloquei `com.kavdeck.mobile` como
+   placeholder em `mobile/app.json` (`ios.bundleIdentifier` e
+   `android.package`). Troque antes do primeiro envio às lojas — depois de
+   publicado uma vez, esse identificador não dá pra mudar.
+
+3. **Contas de desenvolvedor nas lojas**, só quando for publicar de
+   verdade: Apple Developer Program (~US$99/ano) e Google Play Console
+   (taxa única de ~US$25). Sem elas dá pra gerar builds internos
+   (`eas build --profile preview`) e instalar direto no aparelho pra testar,
+   só não dá pra publicar na App Store/Play Store.
+
+Com a conta Expo criada e `eas init` rodado, builda assim:
+
+```
+cd mobile
+npx eas-cli build --profile preview --platform all
+```
+
+Ou pelo GitHub Actions (aba **Actions** → **Build mobile app (EAS)** →
+**Run workflow**) — nesse caso, cadastre o secret `EXPO_TOKEN` primeiro
+(Settings → Secrets and variables → Actions), gerado em
+expo.dev → Account settings → Access tokens.
+
+Os perfis em `mobile/eas.json`:
+- `development` — build com dev client, pra rodar com `expo start` conectado
+  no seu backend local.
+- `preview` — instalável internamente (link direto, sem loja), bom pra
+  testar com o cliente antes de publicar.
+- `production` — pronto pra enviar às lojas (`eas submit`).
+
+⚠️ Os perfis `preview` e `production` não têm `EXPO_PUBLIC_API_URL` fixado —
+usam o que estiver configurado como variável de ambiente do projeto no
+painel da Expo (`eas env:create`) ou em `mobile/.env` no momento do build.
+Configure isso apontando para o backend em produção (seção 1 acima) antes de
+gerar um build de verdade.

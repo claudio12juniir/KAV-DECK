@@ -5,3 +5,6 @@ web/dist/
 electron/release/
 .DS_Store
 .claude/
+mobile/.env
+mobile/.expo/
+mobile/dist/
