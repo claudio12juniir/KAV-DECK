@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "KAV DECK",
-    "slug": "kav-deck-mobile",
+    "slug": "kav-deck",
     "scheme": "kavdeck",
     "version": "1.0.0",
     "orientation": "default",
@@ -27,6 +27,11 @@
       "expo-router",
       "expo-font",
       "@react-native-community/datetimepicker"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5b02fd73-d41b-4259-8906-055973f8e8e1"
+      }
+    }
   }
 }
