@@ -1,15 +1,9 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { loadUsuarioFromPayload, verifyAccessToken } from "../lib/authToken.js";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/AppError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-// Projetos Supabase atuais assinam o JWT com chaves assimétricas (ES256) por
-// padrão, não mais com um segredo compartilhado — por isso a verificação
-// busca a chave pública certa (por `kid`) no endpoint JWKS do próprio
-// projeto, em vez de comparar contra um secret estático.
-const JWKS = createRemoteJWKSet(new URL("/auth/v1/.well-known/jwks.json", process.env.SUPABASE_URL));
-
-export const auth = asyncHandler(async (req, res, next) => {
+async function autenticar(req) {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     throw new AppError(401, "UNAUTHORIZED", "Token de autenticação ausente.");
@@ -18,17 +12,13 @@ export const auth = asyncHandler(async (req, res, next) => {
   const token = header.slice("Bearer ".length);
   let payload;
   try {
-    ({ payload } = await jwtVerify(token, JWKS));
+    payload = await verifyAccessToken(token);
   } catch {
     throw new AppError(401, "UNAUTHORIZED", "Token de autenticação inválido ou expirado.");
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: payload.sub },
-    select: { id: true, empresaId: true, role: true, ativo: true, nome: true, email: true, ultimoAcessoEm: true },
-  });
-
-  if (!usuario || !usuario.ativo) {
+  const usuario = await loadUsuarioFromPayload(payload);
+  if (!usuario) {
     throw new AppError(403, "FORBIDDEN", "Usuário não encontrado ou inativo.");
   }
 
@@ -49,6 +39,42 @@ export const auth = asyncHandler(async (req, res, next) => {
   if (!usuario.ultimoAcessoEm || usuario.ultimoAcessoEm < cincoMinutosAtras) {
     prisma.usuario.update({ where: { id: usuario.id }, data: { ultimoAcessoEm: new Date() } }).catch(() => {});
   }
+}
 
+// Sessão única por dispositivo (ver prisma/schema.prisma:SessaoAtiva): o
+// cliente manda um X-Session-Id próprio (não é o JWT) em todo request: se o
+// banco tiver um sessaoId diferente pra esse usuário — porque ele logou em
+// outro dispositivo depois — essa sessão está "velha" e cai. Fail-open
+// quando o header não vem, pra não quebrar clientes antigos/health checks.
+async function checarSessaoUnica(req) {
+  const sessionId = req.headers["x-session-id"];
+  if (!sessionId) return;
+
+  const sessaoAtiva = await prisma.sessaoAtiva.findUnique({
+    where: { usuarioId: req.user.id },
+    select: { sessaoId: true },
+  });
+
+  if (sessaoAtiva && sessaoAtiva.sessaoId !== sessionId) {
+    throw new AppError(
+      401,
+      "SESSION_REVOKED",
+      "Sua sessão foi encerrada porque esta conta foi acessada em outro dispositivo.",
+    );
+  }
+}
+
+export const auth = asyncHandler(async (req, res, next) => {
+  await autenticar(req);
+  await checarSessaoUnica(req);
+  next();
+});
+
+// Variante sem a checagem de sessão única — usada só pelo endpoint que
+// reivindica a sessão (POST /me/sessao). Ali a checagem acima rejeitaria a
+// própria reivindicação, porque o banco ainda guarda o sessaoId antigo até
+// o claim terminar de rodar.
+export const authSemChecagemDeSessao = asyncHandler(async (req, res, next) => {
+  await autenticar(req);
   next();
 });

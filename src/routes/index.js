@@ -52,6 +52,7 @@ import { router as configuracoesFiscaisRouter } from "../modules/fiscal/configur
 
 import { router as controleAcessoRouter } from "../modules/sistema/controleAcesso/routes.js";
 import { router as minhaEmpresaRouter } from "../modules/sistema/minhaEmpresa/routes.js";
+import { router as sessoesRouter } from "../modules/sistema/sessoes/routes.js";
 
 import { router as regrasIcmsRouter } from "../modules/cadastros/regrasFiscais/icms.js";
 import { router as regrasIpiRouter } from "../modules/cadastros/regrasFiscais/ipi.js";
@@ -127,6 +128,7 @@ router.use("/fiscal/configuracoes", configuracoesFiscaisRouter);
 
 router.use("/sistema/controle-acesso", controleAcessoRouter);
 router.use("/sistema/minha-empresa", minhaEmpresaRouter);
+router.use("/sistema/sessoes", sessoesRouter);
 
 router.use("/gerenciais/dashboard", dashboardGerencialRouter);
 router.use("/gerenciais/analytics", analyticsRouter);

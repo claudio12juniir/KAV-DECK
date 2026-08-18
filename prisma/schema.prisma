@@ -229,9 +229,30 @@ model Usuario {
   ajustesEstoqueLancados MovimentoEstoque[]
   bloqueiosSolicitados   BloqueioFinanceiroCliente[] @relation("BloqueioSolicitadoPor")
   bloqueiosAutorizados   BloqueioFinanceiroCliente[] @relation("BloqueioAutorizadoPor")
+  sessaoAtiva            SessaoAtiva?
 
   @@index([empresaId])
   @@map("usuarios")
+}
+
+// Um usuário, uma sessão — o campo @unique em usuarioId é o que garante "1
+// dispositivo por vez" no nível do banco: reclamar uma sessão nova é sempre
+// um upsert que substitui a linha anterior, nunca uma segunda linha. O
+// `sessaoId` é gerado pelo cliente (não é o JWT em si) e viaja em todo
+// request via header X-Session-Id; o middleware `auth` compara os dois e
+// derruba com 401 SESSION_REVOKED quem estiver com o valor antigo. Ver
+// src/middlewares/auth.js e src/modules/auth/me/service.js.
+model SessaoAtiva {
+  id             String   @id @default(uuid()) @db.Uuid
+  usuarioId      String   @unique @map("usuario_id") @db.Uuid
+  sessaoId       String   @map("sessao_id")
+  dispositivo    String?  @map("dispositivo")
+  criadaEm       DateTime @default(now()) @map("criada_em")
+  ultimoAcessoEm DateTime @default(now()) @map("ultimo_acesso_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("sessoes_ativas")
 }
 
 // Override fino de permissão por ação, usado pelo middleware requirePermissao

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { auth } from "../../../middlewares/auth.js";
+import { requireRole } from "../../../middlewares/rbac.js";
 import { validate } from "../../../middlewares/validate.js";
 import * as controller from "./controller.js";
 import { relatorioGerencialQuerySchema } from "./schema.js";
@@ -7,6 +8,9 @@ import { relatorioGerencialQuerySchema } from "./schema.js";
 export const router = Router();
 
 router.use(auth);
+// DRE, DFC e vendas por produto/cliente são relatórios gerenciais
+// (claude.md, seção 5: persona Gestor/Administrador).
+router.use(requireRole("ADMIN", "GESTOR"));
 
 router.get("/vendas-por-cliente", validate({ query: relatorioGerencialQuerySchema }), controller.vendasPorCliente);
 router.get("/vendas-por-produto", validate({ query: relatorioGerencialQuerySchema }), controller.vendasPorProduto);
