@@ -34,11 +34,15 @@ para administrar:
 3. **Comando de build** (builda o backend e também o frontend, que agora é
    servido pelo próprio backend):
    ```
-   npm install && npx prisma generate && npm --prefix web ci && VITE_API_URL=/api/v1 npm --prefix web run build
+   npm install && npx prisma generate && npm --prefix web ci --include=dev && VITE_API_URL=/api/v1 npm --prefix web run build
    ```
    O `VITE_API_URL=/api/v1` (caminho relativo, não a URL completa) é
    proposital: assim o frontend funciona em qualquer domínio que o backend
-   estiver hospedado, sem precisar rebuildar se o host mudar.
+   estiver hospedado, sem precisar rebuildar se o host mudar. O
+   `--include=dev` é necessário porque o Render seta `NODE_ENV=production`,
+   e isso faz o `npm ci` pular `devDependencies` por padrão — sem essa flag
+   o Vite (que é devDependency) não é instalado e o build falha com
+   `vite: not found`.
 4. Comando de start: `npm start` (já existe em `package.json`).
 5. Configure as variáveis de ambiente do serviço com os mesmos nomes do seu
    `.env` local: `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, e as demais
