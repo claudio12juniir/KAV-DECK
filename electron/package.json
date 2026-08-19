@@ -7,10 +7,9 @@
   "scripts": {
     "start": "electron .",
     "dev": "cross-env ELECTRON_START_URL=http://localhost:5173 electron .",
-    "build:web": "npm --prefix ../web run build",
-    "dist:mac": "npm run build:web && electron-builder --mac",
-    "dist:win": "npm run build:web && electron-builder --win",
-    "dist:all": "npm run build:web && electron-builder --mac --win"
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:all": "electron-builder --mac --win"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
@@ -32,9 +31,6 @@
       "settings-preload.js",
       "default-config.json",
       "package.json"
-    ],
-    "extraResources": [
-      { "from": "../web/dist", "to": "web-dist" }
     ],
     "mac": {
       "category": "public.app-category.business",

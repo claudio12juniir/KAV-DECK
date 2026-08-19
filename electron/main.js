@@ -36,7 +36,11 @@ let settingsWindow = null;
 
 function getStartUrl() {
   if (isDev) return process.env.ELECTRON_START_URL || "http://localhost:5173";
-  return `file://${path.join(process.resourcesPath, "web-dist", "index.html")}`;
+  // Em produção o Electron carrega o frontend direto do backend (que agora
+  // também serve o build do web/dist), em vez de um arquivo empacotado no
+  // instalador — assim atualizar o frontend é só um deploy, sem gerar
+  // instalador novo pro cliente baixar.
+  return readConfig().apiUrl.replace(/\/api\/v1\/?$/, "");
 }
 
 function createMainWindow() {
@@ -152,7 +156,7 @@ ipcMain.handle("kav:get-api-url", () => readConfig().apiUrl);
 ipcMain.handle("kav:set-api-url", (_event, url) => {
   const next = writeConfig({ apiUrl: url });
   if (settingsWindow) settingsWindow.close();
-  if (mainWindow) mainWindow.reload();
+  if (mainWindow) mainWindow.loadURL(getStartUrl());
   return next.apiUrl;
 });
 

@@ -34,15 +34,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Instalar dependências do frontend
-        working-directory: web
-        run: npm ci
-
       - name: Instalar dependências do Electron
         working-directory: electron
         run: npm ci
 
-      - name: Build (frontend + instalador)
+      - name: Build (instalador)
         working-directory: electron
         run: npm run ${{ matrix.script }}
 

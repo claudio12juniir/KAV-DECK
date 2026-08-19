@@ -1,10 +1,20 @@
 # KAV DECK — do web ao instalável (Windows/macOS)
 
-Arquitetura escolhida: o app desktop é um **cliente fino em Electron** — ele
-empacota só o frontend (`web/dist`) e se conecta pela internet a um backend
-hospedado à parte. Nenhuma credencial de banco de dados (`.env` do backend)
-entra no instalador. Isso significa que **o backend precisa estar rodando em
-algum servidor acessível pela internet antes de gerar o instalador final**.
+Arquitetura escolhida: o app desktop é um **cliente fino em Electron** — não
+empacota o frontend, ele carrega a página direto do backend hospedado, por
+HTTPS, igual um navegador (só que numa janela nativa, sem barra de endereço).
+O próprio backend Express serve tanto a API (`/api/v1/...`) quanto o build do
+frontend (`web/dist`). Nenhuma credencial de banco de dados (`.env` do
+backend) entra no instalador. Isso significa que **o backend precisa estar
+rodando em algum servidor acessível pela internet antes de gerar o
+instalador final**.
+
+**Por que isso importa pra manutenção:** como o instalador não carrega nada
+localmente, tanto mudanças de backend quanto de frontend (telas, React) ficam
+disponíveis pra todo mundo assim que você faz o deploy — ninguém precisa
+desinstalar/reinstalar o app desktop. Instalador novo só é necessário se
+mudar algo no próprio Electron (menu nativo, ícone, `main.js`, etc.), o que é
+raro.
 
 Eu não consigo criar contas em serviços de hospedagem por você (Railway,
 Render, uma VPS, etc.) — essa parte é sua. Abaixo está o passo a passo
@@ -21,17 +31,30 @@ para administrar:
 1. Crie uma conta em railway.app ou render.com.
 2. Novo serviço → "Deploy from GitHub" → aponte para este repositório
    (`claudio12juniir/KAV-DECK`).
-3. Comando de start: `npm start` (já existe em `package.json`).
-4. Configure as variáveis de ambiente do serviço com os mesmos nomes do seu
+3. **Comando de build** (builda o backend e também o frontend, que agora é
+   servido pelo próprio backend):
+   ```
+   npm install && npx prisma generate && npm --prefix web ci && VITE_API_URL=/api/v1 npm --prefix web run build
+   ```
+   O `VITE_API_URL=/api/v1` (caminho relativo, não a URL completa) é
+   proposital: assim o frontend funciona em qualquer domínio que o backend
+   estiver hospedado, sem precisar rebuildar se o host mudar.
+4. Comando de start: `npm start` (já existe em `package.json`).
+5. Configure as variáveis de ambiente do serviço com os mesmos nomes do seu
    `.env` local: `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, e as demais
    presentes em `.env.example`. **Não** defina `SUPABASE_SERVICE_ROLE_KEY` a
    menos que você tenha decidido habilitar as funções que dependem dela
    (histórico de login, reset de senha via admin — hoje retornam erro
    claro de "não configurado").
-5. Após o deploy, anote a URL pública gerada (ex.:
+6. Após o deploy, anote a URL pública gerada (ex.:
    `https://kav-deck-api.up.railway.app`).
-6. Teste: `curl https://SUA-URL/api/v1/me` deve responder 401 (não 502/erro
-   de conexão) — isso confirma que o servidor subiu.
+7. Teste: abra a URL num navegador — deve carregar a tela de login do KAV
+   DECK (não um JSON). `curl https://SUA-URL/api/v1/me` deve responder 401
+   (não 502/erro de conexão) — isso confirma que a API também subiu.
+
+> Se o serviço já existir (ex.: `kav-deck-api` no Render, criado antes desta
+> mudança), é só editar o **Build Command** nas configurações do serviço pro
+> comando acima e disparar um novo deploy — não precisa recriar o serviço.
 
 ### Opção B — VPS própria (mais controle)
 Suba com Docker ou PM2 rodando `npm start` atrás de um proxy HTTPS (Caddy ou
@@ -93,7 +116,9 @@ cd electron
 npm install          # primeira vez apenas
 npm run dist:mac
 ```
-Gera `.dmg` e `.zip` em `electron/release/`, para Intel e Apple Silicon.
+Gera `.dmg` e `.zip` em `electron/release/`, para Intel e Apple Silicon. Não
+builda mais o frontend (ele não vai dentro do instalador) — só empacota a
+casca do Electron, que carrega o frontend do backend em produção.
 
 ### Windows
 Este Mac não tem o Wine instalado, que o `electron-builder` exige para
@@ -138,13 +163,19 @@ eu consiga adquirir por você.
 ## 5. Resumo do que já está pronto no repositório
 
 - `electron/` — app Electron completo (janela principal, menu nativo,
-  tela de configuração de servidor, empacotamento).
+  tela de configuração de servidor, empacotamento). Carrega o frontend
+  direto do backend configurado (`electron/main.js` → `getStartUrl()`), não
+  empacota mais `web/dist` no instalador.
 - `electron/build/icon.png` — ícone placeholder (KV). Troque por uma arte
   final quando tiver a identidade visual definitiva do cliente.
 - `.github/workflows/build-desktop.yml` — build automatizado Win + macOS.
+- `src/app.js` — o backend Express agora também serve `web/dist` (build do
+  frontend) com fallback de rota pra SPA, além da API em `/api/v1`.
 - `web/src/lib/apiClient.js` — já preparado para usar a URL configurada
   pelo app desktop em runtime, sem precisar rebuildar o instalador toda vez
-  que o endereço do backend mudar.
+  que o endereço do backend mudar. Trocar o servidor em **Servidor →
+  Configurar servidor...** agora recarrega a janela inteira a partir do
+  host novo (não só a chamada de API), já que a própria página vem de lá.
 
 ---
 
