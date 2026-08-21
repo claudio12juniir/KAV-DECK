@@ -50,6 +50,14 @@ para administrar:
    menos que você tenha decidido habilitar as funções que dependem dela
    (histórico de login, reset de senha via admin — hoje retornam erro
    claro de "não configurado").
+   ⚠️ Como o backend agora também builda e serve o frontend (passo 3), as
+   variáveis do `web/.env.example` (`VITE_SUPABASE_URL`,
+   `VITE_SUPABASE_ANON_KEY`) **também precisam estar nas variáveis de
+   ambiente do serviço** — o Vite grava esses valores dentro do bundle no
+   momento do build, não em runtime. Sem elas, o build conclui sem erro mas
+   o app quebra assim que abre (`supabaseUrl is required`), com tela em
+   branco. `VITE_API_URL` não entra aqui porque já é setado inline no
+   comando de build (ponto 3 acima).
 6. Após o deploy, anote a URL pública gerada (ex.:
    `https://kav-deck-api.up.railway.app`).
 7. Teste: abra a URL num navegador — deve carregar a tela de login do KAV

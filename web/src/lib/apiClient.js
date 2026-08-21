@@ -22,7 +22,9 @@ async function request(path, { method = "GET", body, query } = {}) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const url = new URL(`${BASE_URL}${path}`);
+  // BASE_URL pode ser um caminho relativo em produção (ex.: "/api/v1"), que
+  // o construtor de URL só aceita com uma base explícita.
+  const url = new URL(`${BASE_URL}${path}`, window.location.origin);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined && value !== null && value !== "") {

@@ -7,7 +7,9 @@ import { supabase } from "./supabaseClient.js";
 // desktop Electron, a URL da API é injetada em runtime pelo preload — ver
 // apiClient.js para o mesmo padrão.
 const API_BASE = globalThis.__KAV_DESKTOP_API_URL__ || import.meta.env.VITE_API_URL;
-const SOCKET_ORIGIN = new URL(API_BASE).origin;
+// API_BASE pode ser um caminho relativo em produção (ex.: "/api/v1"), que o
+// construtor de URL só aceita com uma base explícita.
+const SOCKET_ORIGIN = new URL(API_BASE, window.location.origin).origin;
 
 let socket = null;
 
