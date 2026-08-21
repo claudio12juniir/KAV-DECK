@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { Navigate, Route, BrowserRouter as Router, Routes, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell.jsx";
 import { ToastProvider, useToast } from "./components/ui/Toast.jsx";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import { RealtimeProvider } from "./contexts/RealtimeContext.jsx";
+import { supabase } from "./lib/supabaseClient.js";
 import { CategoriasPage } from "./features/cadastros/categorias/CategoriasPage.jsx";
 import { CondicoesPagamentoPage } from "./features/cadastros/condicoesPagamento/CondicoesPagamentoPage.jsx";
 import { DepartamentosPage } from "./features/cadastros/departamentos/DepartamentosPage.jsx";
@@ -17,6 +18,7 @@ import { PedidosCompraListPage } from "./features/compras/PedidosCompraListPage.
 import { RecebimentoPedidoCompraPage } from "./features/compras/RecebimentoPedidoCompraPage.jsx";
 import { DashboardPage } from "./features/dashboard/DashboardPage.jsx";
 import { LoginPage } from "./features/auth/LoginPage.jsx";
+import { RedefinirSenhaPage } from "./features/auth/RedefinirSenhaPage.jsx";
 import { CaixasEmbalagemPage } from "./features/estoque/caixasEmbalagem/CaixasEmbalagemPage.jsx";
 import { InventarioDetailPage } from "./features/estoque/inventarios/InventarioDetailPage.jsx";
 import { InventariosPage } from "./features/estoque/inventarios/InventariosPage.jsx";
@@ -52,6 +54,7 @@ import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
 function AppRoutes() {
   const { session, loading, sessaoEncerradaMotivo, limparAvisoSessaoEncerrada } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!sessaoEncerradaMotivo) return;
@@ -60,11 +63,27 @@ function AppRoutes() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessaoEncerradaMotivo]);
 
+  // O link do e-mail de recuperação de senha redireciona pra Site URL (a
+  // raiz do app), não pra uma rota específica — o Supabase client detecta o
+  // token da URL e dispara este evento antes de qualquer outra coisa
+  // renderizar, então é aqui que mandamos pra tela de definir nova senha em
+  // vez de deixar cair direto no dashboard com a sessão de recuperação.
+  useEffect(() => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") navigate("/redefinir-senha", { replace: true });
+    });
+    return () => subscription.subscription.unsubscribe();
+  }, [navigate]);
+
   if (loading) return null;
 
   return (
     <Routes>
       <Route path="/login" element={session ? <Navigate to="/" replace /> : <LoginPage />} />
+      {/* Alcançada só pelo link de e-mail de recuperação de senha — não gateia
+          por `session` porque a sessão de recuperação já existe nesse ponto
+          (ver RedefinirSenhaPage). */}
+      <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
       <Route
         element={
           <ProtectedRoute>
