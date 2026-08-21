@@ -6,3 +6,7 @@ export const createCertificadoDigitalSchema = z.object({
 });
 
 export const updateCertificadoDigitalSchema = createCertificadoDigitalSchema.partial();
+
+export const uploadCertificadoDigitalSchema = z.object({
+  senha: z.string().min(1, "Senha do certificado (.pfx) é obrigatória."),
+});

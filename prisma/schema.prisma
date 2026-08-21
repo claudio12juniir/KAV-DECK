@@ -209,8 +209,69 @@ model Empresa {
   certificadosDigitais CertificadoDigital[]
   precosCompra         PrecoCompra[]
   configuracaoFiscal   ConfiguracaoFiscal?
+  assinatura           AssinaturaEmpresa?
+  pontosAcesso         PontoAcesso[]
 
   @@map("empresas")
+}
+
+enum StatusAssinaturaEmpresa {
+  AGUARDANDO_PAGAMENTO // cadastro público criado, primeira cobrança ainda não confirmada
+  ATIVA
+  INADIMPLENTE // ciclo vigente não pago, ainda dentro dos 10 dias de carência
+  SUSPENSA // > 10 dias de atraso — acesso cortado
+}
+
+enum StatusPontoAcesso {
+  ATIVO
+  CANCELAMENTO_AGENDADO // será removido no fim do ciclo vigente
+  ENCERRADO
+}
+
+enum TipoPontoAcesso {
+  PRINCIPAL // o ponto fundador, criado no auto-cadastro — permanente
+  EXTRA // comprável/cancelável por um ADMIN
+}
+
+// Uma assinatura recorrente consolidada por empresa (não uma por ponto) — o
+// valor cobrado no Mercado Pago é sempre a soma de todos os PontoAcesso
+// vigentes; comprar/cancelar um ponto só reflete na PRÓXIMA cobrança, nunca
+// retroativamente (ver PontoAcesso.dataFimVigencia).
+model AssinaturaEmpresa {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  empresaId           String                  @unique @map("empresa_id") @db.Uuid
+  mpPreapprovalId     String?                 @map("mp_preapproval_id")
+  mpPayerId           String?                 @map("mp_payer_id")
+  status              StatusAssinaturaEmpresa @default(AGUARDANDO_PAGAMENTO)
+  proximaCobranca     DateTime?               @map("proxima_cobranca") @db.Date
+  dataVencimentoAtual DateTime?               @map("data_vencimento_atual") @db.Date
+  ultimoPagamentoEm   DateTime?               @map("ultimo_pagamento_em")
+  criadoEm            DateTime                @default(now()) @map("criado_em")
+  atualizadoEm        DateTime                @updatedAt @map("atualizado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("assinaturas_empresa")
+}
+
+// Cada linha é 1 licença de login concorrente ("ponto"). O limite de sessões
+// simultâneas da empresa (ver claimSessao em modules/auth/me/service.js) conta
+// quantos PontoAcesso estão utilizáveis agora (ATIVO ou CANCELAMENTO_AGENDADO
+// ainda dentro da vigência) — não importa qual Usuario ocupa qual ponto.
+model PontoAcesso {
+  id              String            @id @default(uuid()) @db.Uuid
+  empresaId       String            @map("empresa_id") @db.Uuid
+  tipo            TipoPontoAcesso
+  valorMensal     Decimal           @db.Decimal(10, 2)
+  status          StatusPontoAcesso @default(ATIVO)
+  dataFimVigencia DateTime?         @map("data_fim_vigencia") @db.Date
+  criadoEm        DateTime          @default(now()) @map("criado_em")
+  atualizadoEm    DateTime          @updatedAt @map("atualizado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, status])
+  @@map("pontos_acesso")
 }
 
 model Usuario {
@@ -1299,16 +1360,36 @@ model CertificadoDigital {
 // Parametrização única por empresa do módulo fiscal — ambiente (homologação
 // trava qualquer tentativa de transmissão real até alguém trocar
 // deliberadamente pra produção) e os dados de série/CSC usados na emissão.
+//
+// Os campos nfeio* existem porque a transmissão real (ver
+// modules/fiscal/transmissaoSefaz/service.js) é feita via NFe.io: cada
+// Empresa daqui vira uma "Company" separada dentro da MESMA conta master da
+// KAV DECK na NFe.io (uma API key só, várias companies) — nfeioCompanyId
+// guarda o id devolvido por eles na criação. regimeTributario e o endereço
+// abaixo são exigidos pela NFe.io pra criar essa Company (não existiam antes
+// em nenhum lugar do schema porque Empresa nunca teve endereço próprio).
 model ConfiguracaoFiscal {
-  id              String         @id @default(uuid()) @db.Uuid
-  empresaId       String         @unique @map("empresa_id") @db.Uuid
-  ambiente        AmbienteFiscal @default(HOMOLOGACAO)
-  serieNfePadrao  String         @default("1") @map("serie_nfe_padrao")
-  serieNfcePadrao String         @default("1") @map("serie_nfce_padrao")
-  cscId           String?        @map("csc_id")
-  cscToken        String?        @map("csc_token")
-  criadoEm        DateTime       @default(now()) @map("criado_em")
-  atualizadoEm    DateTime       @updatedAt @map("atualizado_em")
+  id                       String         @id @default(uuid()) @db.Uuid
+  empresaId                String         @unique @map("empresa_id") @db.Uuid
+  ambiente                 AmbienteFiscal @default(HOMOLOGACAO)
+  serieNfePadrao           String         @default("1") @map("serie_nfe_padrao")
+  serieNfcePadrao          String         @default("1") @map("serie_nfce_padrao")
+  cscId                    String?        @map("csc_id")
+  cscToken                 String?        @map("csc_token")
+  nfeioCompanyId           String?        @map("nfeio_company_id")
+  nfeioStateTaxConfigurado Boolean        @default(false) @map("nfeio_state_tax_configurado")
+  inscricaoEstadual        String?        @map("inscricao_estadual")
+  regimeTributario         String?        @map("regime_tributario")
+  enderecoLogradouro       String?        @map("endereco_logradouro")
+  enderecoNumero           String?        @map("endereco_numero")
+  enderecoComplemento      String?        @map("endereco_complemento")
+  enderecoBairro           String?        @map("endereco_bairro")
+  enderecoCep              String?        @map("endereco_cep")
+  enderecoUf               String?        @map("endereco_uf")
+  enderecoCidadeCodigoIbge String?        @map("endereco_cidade_codigo_ibge")
+  enderecoCidadeNome       String?        @map("endereco_cidade_nome")
+  criadoEm                 DateTime       @default(now()) @map("criado_em")
+  atualizadoEm             DateTime       @updatedAt @map("atualizado_em")
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 

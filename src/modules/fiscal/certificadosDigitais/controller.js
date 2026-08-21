@@ -1,4 +1,5 @@
 import { asyncHandler } from "../../../utils/asyncHandler.js";
+import { AppError } from "../../../utils/AppError.js";
 import { buildPaginatedResult, parsePagination } from "../../../utils/pagination.js";
 import * as service from "./service.js";
 
@@ -30,4 +31,15 @@ export const update = asyncHandler(async (req, res) => {
 export const remove = asyncHandler(async (req, res) => {
   await service.remove({ empresaId: req.user.empresaId, id: req.params.id });
   res.status(204).send();
+});
+
+export const upload = asyncHandler(async (req, res) => {
+  if (!req.file) throw new AppError(422, "ARQUIVO_OBRIGATORIO", "Envie o certificado (.pfx) no campo 'file'.");
+  const certificado = await service.upload({
+    empresaId: req.user.empresaId,
+    arquivoBuffer: req.file.buffer,
+    nomeArquivo: req.file.originalname,
+    senha: req.body.senha,
+  });
+  res.status(201).json(certificado);
 });

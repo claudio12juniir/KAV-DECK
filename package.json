@@ -23,6 +23,7 @@
     "helmet": "^8.0.0",
     "jose": "^6.2.8",
     "lucide-react": "^1.31.0",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
     "shadcn": "^4.17.0",
     "socket.io": "^4.8.3",
