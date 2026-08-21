@@ -44,6 +44,7 @@ import { GruposEmpresasPage } from "./features/participantes/gruposEmpresas/Grup
 import { ParticipantesPage } from "./features/participantes/participantes/ParticipantesPage.jsx";
 import { RotasEntregaPage } from "./features/participantes/rotasEntrega/RotasEntregaPage.jsx";
 import { TransportadorasPage } from "./features/participantes/transportadoras/TransportadorasPage.jsx";
+import { AssinaturaPage } from "./features/sistema/assinatura/AssinaturaPage.jsx";
 import { ControleAcessoPage } from "./features/sistema/controleAcesso/ControleAcessoPage.jsx";
 import { FaturarPedidoVendaPage } from "./features/vendas/FaturarPedidoVendaPage.jsx";
 import { NovoPedidoVendaPage } from "./features/vendas/NovoPedidoVendaPage.jsx";
@@ -138,6 +139,7 @@ function AppRoutes() {
         <Route path="/fiscal/cfop" element={<CfopPage />} />
 
         <Route path="/sistema/controle-acesso" element={<ControleAcessoPage />} />
+        <Route path="/sistema/assinatura" element={<AssinaturaPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
