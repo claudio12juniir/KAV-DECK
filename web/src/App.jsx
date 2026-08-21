@@ -17,6 +17,7 @@ import { PedidoCompraDetailPage } from "./features/compras/PedidoCompraDetailPag
 import { PedidosCompraListPage } from "./features/compras/PedidosCompraListPage.jsx";
 import { RecebimentoPedidoCompraPage } from "./features/compras/RecebimentoPedidoCompraPage.jsx";
 import { DashboardPage } from "./features/dashboard/DashboardPage.jsx";
+import { EntradaPage } from "./features/auth/EntradaPage.jsx";
 import { LoginPage } from "./features/auth/LoginPage.jsx";
 import { RedefinirSenhaPage } from "./features/auth/RedefinirSenhaPage.jsx";
 import { CaixasEmbalagemPage } from "./features/estoque/caixasEmbalagem/CaixasEmbalagemPage.jsx";
@@ -80,6 +81,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/entrada" element={session ? <Navigate to="/" replace /> : <EntradaPage />} />
       <Route path="/login" element={session ? <Navigate to="/" replace /> : <LoginPage />} />
       {/* Alcançada só pelo link de e-mail de recuperação de senha — não gateia
           por `session` porque a sessão de recuperação já existe nesse ponto

@@ -1,0 +1,66 @@
+.entrada-page {
+  min-height: 100%;
+  display: flex;
+}
+
+.entrada-hero {
+  flex: 1.1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-text);
+  padding: var(--space-8);
+}
+
+.entrada-logo {
+  width: 100%;
+  max-width: 440px;
+  height: auto;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+}
+
+.entrada-painel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  padding: var(--space-6);
+}
+
+.entrada-conteudo {
+  width: 100%;
+  max-width: 340px;
+}
+
+.entrada-titulo {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+}
+
+.entrada-subtitulo {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+}
+
+.entrada-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+@media (max-width: 760px) {
+  .entrada-page {
+    flex-direction: column;
+  }
+
+  .entrada-hero {
+    padding: var(--space-6);
+  }
+
+  .entrada-logo {
+    max-width: 280px;
+  }
+}
