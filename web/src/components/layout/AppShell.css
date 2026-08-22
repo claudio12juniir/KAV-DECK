@@ -23,8 +23,8 @@
 .app-topbar-inner {
   display: flex;
   align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-5) var(--space-6);
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-6);
 }
 
 .app-brand {
@@ -41,9 +41,17 @@
 
 .app-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2);
   flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.app-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .app-nav-link {
@@ -52,8 +60,9 @@
   text-decoration: none;
   font-size: var(--text-sm);
   font-weight: 600;
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-radius: var(--radius-sm);
+  white-space: nowrap;
   transition: color 0.15s var(--ease), background 0.15s var(--ease);
 }
 .app-nav-link:hover {
@@ -155,7 +164,7 @@
 
 .app-content {
   flex: 1;
-  padding: var(--space-6) var(--space-5) calc(var(--space-8) + var(--space-5));
+  padding: var(--space-8) var(--space-5) calc(var(--space-8) + var(--space-5));
   width: 100%;
 }
 
@@ -164,6 +173,6 @@
     display: none;
   }
   .app-content {
-    padding: var(--space-5) var(--space-4) var(--space-6);
+    padding: var(--space-6) var(--space-4) var(--space-6);
   }
 }

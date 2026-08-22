@@ -1,7 +1,3 @@
-.dashboard {
-  margin-top: var(--space-6);
-}
-
 .dashboard-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
