@@ -21,6 +21,23 @@ function hojeIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function formatarDataBr(iso) {
+  const [ano, mes, dia] = iso.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+// Exportar em PDF usa a impressão nativa do navegador (o usuário escolhe
+// "Salvar como PDF" no destino) em vez de gerar o arquivo em JS — evita
+// puxar libs pesadas (jsPDF/html2canvas) só pra isso, e o resultado é texto
+// selecionável de verdade, não uma imagem. O título vira o nome sugerido
+// do arquivo na maioria dos navegadores.
+function exportarPdf(titulo, periodoLabel) {
+  const tituloOriginal = document.title;
+  document.title = `KAV DECK - ${titulo} - ${periodoLabel}`.replace(/\s+/g, " ");
+  window.print();
+  document.title = tituloOriginal;
+}
+
 const ABAS = [
   { id: "geral", label: "Visão geral" },
   { id: "dre", label: "DRE" },
@@ -43,10 +60,29 @@ function LinhaValor({ label, valor, destaque, negativo }) {
   );
 }
 
-function VisaoGeral({ dados }) {
+function CabecalhoAba({ titulo, periodoLabel, acoesExtra }) {
+  return (
+    <div className="relatorio-cabecalho-aba">
+      <div>
+        <h3>{titulo}</h3>
+        <p className="relatorio-periodo-print">Período: {periodoLabel}</p>
+      </div>
+      <div className="relatorio-cabecalho-aba-acoes">
+        {acoesExtra}
+        <Button variant="secondary" size="sm" className="no-print" onClick={() => exportarPdf(titulo, periodoLabel)}>
+          Exportar PDF
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function VisaoGeral({ dados, periodoLabel }) {
   const resultadoPositivo = Number(dados.dre.resultado) >= 0;
   return (
-    <div className="relatorio-stats-grid">
+    <div>
+      <CabecalhoAba titulo="Visão geral" periodoLabel={periodoLabel} />
+      <div className="relatorio-stats-grid">
       <Card>
         <p className="relatorio-stat-label">Receita líquida (vendas)</p>
         <h2 className="relatorio-stat-valor">{formatarMoeda(dados.dre.receitaLiquida)}</h2>
@@ -77,14 +113,15 @@ function VisaoGeral({ dados }) {
         <h2 className="relatorio-stat-valor">{formatarMoeda(dados.pessoal.totalGeral)}</h2>
         <p className="relatorio-stat-sub">{dados.pessoal.itens.length} colaborador(es) ativo(s)</p>
       </Card>
+      </div>
     </div>
   );
 }
 
-function Dre({ dre }) {
+function Dre({ dre, periodoLabel }) {
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>DRE simplificado</h3>
+      <CabecalhoAba titulo="DRE simplificado" periodoLabel={periodoLabel} />
       <p className="relatorio-aviso">
         Leitura gerencial rápida, não é um demonstrativo contábil formal — não há classificação de contas por
         natureza no plano de contas atual pra sustentar isso.
@@ -101,10 +138,10 @@ function Dre({ dre }) {
   );
 }
 
-function Dfc({ dfc }) {
+function Dfc({ dfc, periodoLabel }) {
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Fluxo de caixa</h3>
+      <CabecalhoAba titulo="Fluxo de caixa" periodoLabel={periodoLabel} />
       <LinhaValor label="Saldo inicial (antes do período)" valor={dfc.saldoInicial} />
       <LinhaValor label="Entradas no período" valor={dfc.entradas} />
       <LinhaValor label="Saídas no período" valor={dfc.saidas} negativo />
@@ -113,10 +150,10 @@ function Dfc({ dfc }) {
   );
 }
 
-function Fiscal({ fiscal }) {
+function Fiscal({ fiscal, periodoLabel }) {
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Resumo fiscal — notas fiscais de saída autorizadas</h3>
+      <CabecalhoAba titulo="Resumo fiscal — notas fiscais de saída autorizadas" periodoLabel={periodoLabel} />
       <p className="relatorio-aviso">
         Tributos das NF-e emitidas no período (não é uma taxa cobrada por emissão — é a soma de ICMS, IPI, PIS e
         COFINS de todos os itens das notas).
@@ -139,7 +176,7 @@ const TIPO_COLABORADOR_LABEL = {
   SEPARADOR: "Separador",
 };
 
-function Colaboradores({ pessoal }) {
+function Colaboradores({ pessoal, periodoLabel }) {
   const columns = [
     { key: "nome", label: "Nome" },
     { key: "tipo", label: "Função", render: (row) => TIPO_COLABORADOR_LABEL[row.tipo] ?? row.tipo },
@@ -152,16 +189,17 @@ function Colaboradores({ pessoal }) {
   ];
   return (
     <Card>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
-        <h3 style={{ margin: 0 }}>Custo mensal por colaborador</h3>
-        <strong>Total: {formatarMoeda(pessoal.totalGeral)}</strong>
-      </div>
+      <CabecalhoAba
+        titulo="Custo mensal por colaborador"
+        periodoLabel={periodoLabel}
+        acoesExtra={<strong>Total: {formatarMoeda(pessoal.totalGeral)}</strong>}
+      />
       <DataTable columns={columns} rows={pessoal.itens} emptyMessage="Nenhum colaborador ativo cadastrado." />
     </Card>
   );
 }
 
-function ListaValor({ titulo, itens, colunaNome, colunaLabel, colunaExtra }) {
+function ListaValor({ titulo, itens, colunaNome, colunaLabel, colunaExtra, periodoLabel }) {
   const columns = [
     { key: "nome", label: colunaLabel, render: (row) => row[colunaNome] },
     ...(colunaExtra ? [colunaExtra] : []),
@@ -170,7 +208,7 @@ function ListaValor({ titulo, itens, colunaNome, colunaLabel, colunaExtra }) {
   const rows = itens.map((item, index) => ({ id: item.clienteId ?? item.produtoId ?? item.fornecedorId ?? index, ...item }));
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>{titulo}</h3>
+      <CabecalhoAba titulo={titulo} periodoLabel={periodoLabel} />
       <DataTable columns={columns} rows={rows} emptyMessage="Nenhum registro no período." />
     </Card>
   );
@@ -200,6 +238,8 @@ export function RelatoriosPage() {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const periodoLabel = `${formatarDataBr(dataInicial)} a ${formatarDataBr(dataFinal)}`;
 
   return (
     <div>
@@ -233,11 +273,11 @@ export function RelatoriosPage() {
             ))}
           </div>
 
-          {aba === "geral" && <VisaoGeral dados={dados} />}
-          {aba === "dre" && <Dre dre={dados.dre} />}
-          {aba === "dfc" && <Dfc dfc={dados.dfc} />}
-          {aba === "fiscal" && <Fiscal fiscal={dados.fiscal} />}
-          {aba === "colaboradores" && <Colaboradores pessoal={dados.pessoal} />}
+          {aba === "geral" && <VisaoGeral dados={dados} periodoLabel={periodoLabel} />}
+          {aba === "dre" && <Dre dre={dados.dre} periodoLabel={periodoLabel} />}
+          {aba === "dfc" && <Dfc dfc={dados.dfc} periodoLabel={periodoLabel} />}
+          {aba === "fiscal" && <Fiscal fiscal={dados.fiscal} periodoLabel={periodoLabel} />}
+          {aba === "colaboradores" && <Colaboradores pessoal={dados.pessoal} periodoLabel={periodoLabel} />}
           {aba === "clientes" && (
             <ListaValor
               titulo="Vendas por cliente"
@@ -245,6 +285,7 @@ export function RelatoriosPage() {
               colunaNome="razaoSocial"
               colunaLabel="Cliente"
               colunaExtra={{ key: "pedidos", label: "Pedidos", render: (row) => row.pedidos }}
+              periodoLabel={periodoLabel}
             />
           )}
           {aba === "produtos" && (
@@ -254,6 +295,7 @@ export function RelatoriosPage() {
               colunaNome="descricao"
               colunaLabel="Produto"
               colunaExtra={{ key: "quantidade", label: "Quantidade", render: (row) => row.quantidade }}
+              periodoLabel={periodoLabel}
             />
           )}
           {aba === "fornecedores" && (
@@ -263,6 +305,7 @@ export function RelatoriosPage() {
               colunaNome="razaoSocial"
               colunaLabel="Fornecedor"
               colunaExtra={{ key: "pedidos", label: "Pedidos", render: (row) => row.pedidos }}
+              periodoLabel={periodoLabel}
             />
           )}
         </>

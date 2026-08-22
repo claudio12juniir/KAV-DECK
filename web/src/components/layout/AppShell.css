@@ -180,3 +180,15 @@
     padding-bottom: var(--space-6);
   }
 }
+
+@media print {
+  .app-topbar,
+  .dock-outer,
+  .card-nav-container {
+    display: none !important;
+  }
+  .app-content.container {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}
