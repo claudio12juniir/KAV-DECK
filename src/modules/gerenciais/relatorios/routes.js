@@ -16,3 +16,11 @@ router.get("/vendas-por-cliente", validate({ query: relatorioGerencialQuerySchem
 router.get("/vendas-por-produto", validate({ query: relatorioGerencialQuerySchema }), controller.vendasPorProduto);
 router.get("/dre", validate({ query: relatorioGerencialQuerySchema }), controller.dre);
 router.get("/dfc", validate({ query: relatorioGerencialQuerySchema }), controller.dfc);
+router.get(
+  "/compras-por-fornecedor",
+  validate({ query: relatorioGerencialQuerySchema }),
+  controller.comprasPorFornecedor,
+);
+router.get("/fiscal", validate({ query: relatorioGerencialQuerySchema }), controller.resumoFiscal);
+router.get("/colaboradores", controller.custosColaboradores);
+router.get("/principal", validate({ query: relatorioGerencialQuerySchema }), controller.relatorioPrincipal);

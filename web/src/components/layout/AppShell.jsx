@@ -158,6 +158,7 @@ export function AppShell() {
   const navGroups = PAPEIS_COM_ACESSO_SISTEMA.includes(me?.role)
     ? [
         ...NAV_GROUPS,
+        { label: "Relatórios", to: "/relatorios" },
         {
           label: "Sistema",
           items: [
