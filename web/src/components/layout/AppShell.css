@@ -164,15 +164,24 @@
 
 .app-content {
   flex: 1;
-  padding: var(--space-8) var(--space-5) calc(var(--space-8) + var(--space-5));
   width: 100%;
+}
+
+/* Compound selector (duas classes) de propósito: `.app-content` também leva
+   a classe `.container`, que reseta padding-top/bottom pra 0 — precisa de
+   mais especificidade que `.container` sozinho pra não ser sobrescrito,
+   senão o conteúdo cola no menu independente da ordem de import dos CSS. */
+.app-content.container {
+  padding-top: var(--space-8);
+  padding-bottom: calc(var(--space-8) + var(--space-5));
 }
 
 @media (max-width: 780px) {
   .app-nav {
     display: none;
   }
-  .app-content {
-    padding: var(--space-6) var(--space-4) var(--space-6);
+  .app-content.container {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-6);
   }
 }
