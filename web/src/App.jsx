@@ -45,6 +45,7 @@ import { GruposEmpresasPage } from "./features/participantes/gruposEmpresas/Grup
 import { ParticipantesPage } from "./features/participantes/participantes/ParticipantesPage.jsx";
 import { RotasEntregaPage } from "./features/participantes/rotasEntrega/RotasEntregaPage.jsx";
 import { TransportadorasPage } from "./features/participantes/transportadoras/TransportadorasPage.jsx";
+import { CriarContaPage } from "./features/cadastro/CriarContaPage.jsx";
 import { AssinaturaPage } from "./features/sistema/assinatura/AssinaturaPage.jsx";
 import { ControleAcessoPage } from "./features/sistema/controleAcesso/ControleAcessoPage.jsx";
 import { FaturarPedidoVendaPage } from "./features/vendas/FaturarPedidoVendaPage.jsx";
@@ -54,7 +55,7 @@ import { PedidosVendaListPage } from "./features/vendas/PedidosVendaListPage.jsx
 import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
 
 function AppRoutes() {
-  const { session, loading, sessaoEncerradaMotivo, limparAvisoSessaoEncerrada } = useAuth();
+  const { session, me, loading, sessaoEncerradaMotivo, limparAvisoSessaoEncerrada } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -84,9 +85,14 @@ function AppRoutes() {
       <Route path="/entrada" element={session ? <Navigate to="/" replace /> : <EntradaPage />} />
       <Route path="/login" element={session ? <Navigate to="/" replace /> : <LoginPage />} />
       {/* Alcançada só pelo link de e-mail de recuperação de senha — não gateia
-          por `session` porque a sessão de recuperação já existe nesse ponto
-          (ver RedefinirSenhaPage). */}
+          por `session`/`me` porque a sessão de recuperação já existe nesse
+          ponto, mas ainda não tem `me` carregado (ver RedefinirSenhaPage). */}
       <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
+      {/* Gate por `me` (não por `session`): o cadastro cria a sessão do
+          Supabase já no passo 1, antes do Usuario existir no nosso banco —
+          usar `session` aqui expulsaria o usuário da própria tela de
+          cadastro assim que o passo 1 terminasse. */}
+      <Route path="/criar-conta" element={me ? <Navigate to="/" replace /> : <CriarContaPage />} />
       <Route
         element={
           <ProtectedRoute>

@@ -30,6 +30,19 @@ async function autenticar(req) {
     email: usuario.email,
   };
 
+  // Corta o acesso de TODA a empresa (não só de novos logins) quando a
+  // assinatura passou dos 10 dias de carência — ver
+  // src/jobs/assinaturasCron.js, que é quem marca SUSPENSA. Checado em toda
+  // request autenticada, não só no claim de sessão, porque sessões que já
+  // estavam ativas antes da suspensão também precisam parar de funcionar.
+  const assinatura = await prisma.assinaturaEmpresa.findUnique({
+    where: { empresaId: usuario.empresaId },
+    select: { status: true },
+  });
+  if (assinatura?.status === "SUSPENSA") {
+    throw new AppError(402, "ASSINATURA_SUSPENSA", "ACESSO NEGADO! PAGAMENTO EM ATRASO");
+  }
+
   // "Histórico de login" real (via login de fato) exigiria a Admin API da
   // Supabase, que este ambiente não tem credencial pra chamar — isso aqui é
   // a aproximação possível sem essa credencial: marca o último acesso à
@@ -76,5 +89,28 @@ export const auth = asyncHandler(async (req, res, next) => {
 // o claim terminar de rodar.
 export const authSemChecagemDeSessao = asyncHandler(async (req, res, next) => {
   await autenticar(req);
+  next();
+});
+
+// Usado só pelo fluxo público de auto-cadastro (POST /cadastro/empresa): o
+// Supabase Auth user já existe (o frontend acabou de criar via
+// supabase.auth.signUp) mas o Usuario/Empresa deste sistema ainda não —
+// é exatamente este endpoint que os cria. Por isso verifica só a assinatura
+// do JWT, sem exigir (nem checar) um Usuario correspondente.
+export const autenticarSupabaseSemUsuario = asyncHandler(async (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) {
+    throw new AppError(401, "UNAUTHORIZED", "Token de autenticação ausente.");
+  }
+
+  const token = header.slice("Bearer ".length);
+  let payload;
+  try {
+    payload = await verifyAccessToken(token);
+  } catch {
+    throw new AppError(401, "UNAUTHORIZED", "Token de autenticação inválido ou expirado.");
+  }
+
+  req.supabaseUser = { id: payload.sub, email: payload.email };
   next();
 });

@@ -9,6 +9,7 @@ export const claimSessao = asyncHandler(async (req, res) => {
   const dispositivo = req.body.dispositivo ?? req.headers["user-agent"]?.slice(0, 200);
   const sessao = await service.claimSessao({
     usuarioId: req.user.id,
+    empresaId: req.user.empresaId,
     sessaoId: req.body.sessaoId,
     dispositivo,
   });

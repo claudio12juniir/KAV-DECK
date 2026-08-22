@@ -158,7 +158,13 @@ export function AppShell() {
   const navGroups = PAPEIS_COM_ACESSO_SISTEMA.includes(me?.role)
     ? [
         ...NAV_GROUPS,
-        { label: "Sistema", items: [{ to: "/sistema/controle-acesso", label: "Controle de Acesso" }] },
+        {
+          label: "Sistema",
+          items: [
+            { to: "/sistema/controle-acesso", label: "Controle de Acesso" },
+            { to: "/sistema/assinatura", label: "Assinatura" },
+          ],
+        },
       ]
     : NAV_GROUPS;
 

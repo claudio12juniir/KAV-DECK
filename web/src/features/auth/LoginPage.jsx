@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
@@ -56,6 +56,9 @@ export function LoginPage() {
             Entrar
           </Button>
         </form>
+        <p style={{ textAlign: "center", marginTop: "16px" }}>
+          Ainda não tem conta? <Link to="/criar-conta">Cadastre sua empresa</Link>
+        </p>
       </Card>
     </div>
   );

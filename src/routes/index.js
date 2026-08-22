@@ -2,6 +2,10 @@ import { Router } from "express";
 
 import { router as meRouter } from "../modules/auth/me/routes.js";
 
+import { router as cadastroRouter } from "../modules/cadastro/routes.js";
+import { router as webhookMercadoPagoRouter } from "../modules/cadastro/webhookMercadoPago.js";
+import { router as assinaturaRouter } from "../modules/sistema/assinatura/routes.js";
+
 import { router as departamentosRouter } from "../modules/cadastros/departamentos/routes.js";
 import { router as categoriasRouter } from "../modules/cadastros/categorias/routes.js";
 import { router as unidadesMedidaRouter } from "../modules/cadastros/unidadesMedida/routes.js";
@@ -71,6 +75,13 @@ export const router = Router();
 
 router.use("/me", meRouter);
 
+// Públicas de propósito: auto-cadastro (o Usuario ainda não existe) e
+// webhook do Mercado Pago (o MP nunca manda nosso JWT) — nenhuma delas usa
+// o middleware `auth` comum. Ver src/middlewares/auth.js
+// (autenticarSupabaseSemUsuario) e src/modules/cadastro/webhookMercadoPago.js.
+router.use("/cadastro", cadastroRouter);
+router.use("/mercado-pago/webhook", webhookMercadoPagoRouter);
+
 router.use("/cadastros/departamentos", departamentosRouter);
 router.use("/cadastros/categorias", categoriasRouter);
 router.use("/cadastros/unidades-medida", unidadesMedidaRouter);
@@ -129,6 +140,7 @@ router.use("/fiscal/configuracoes", configuracoesFiscaisRouter);
 router.use("/sistema/controle-acesso", controleAcessoRouter);
 router.use("/sistema/minha-empresa", minhaEmpresaRouter);
 router.use("/sistema/sessoes", sessoesRouter);
+router.use("/sistema/assinatura", assinaturaRouter);
 
 router.use("/gerenciais/dashboard", dashboardGerencialRouter);
 router.use("/gerenciais/analytics", analyticsRouter);

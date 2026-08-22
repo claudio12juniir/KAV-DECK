@@ -83,3 +83,14 @@ export function emitSessaoRevogada(sessaoId, motivo) {
   if (!io || !sessaoId) return;
   io.to(sessaoRoom(sessaoId)).emit("session-revoked", { motivo, at: new Date().toISOString() });
 }
+
+// Mesma reação do cliente que emitSessaoRevogada (evento "session-revoked" já
+// tratado em AuthContext/RealtimeContext), mas mirando a empresa inteira em
+// vez de uma sessão específica — usado só quando o cron
+// (src/jobs/assinaturasCron.js) marca a assinatura como SUSPENSA por
+// inadimplência: derruba todo mundo, não só quem está prestes a fazer a
+// próxima requisição HTTP (que já tomaria 402 ASSINATURA_SUSPENSA sozinha).
+export function emitEmpresaSuspensa(empresaId, motivo) {
+  if (!io || !empresaId) return;
+  io.to(empresaRoom(empresaId)).emit("session-revoked", { motivo, at: new Date().toISOString() });
+}

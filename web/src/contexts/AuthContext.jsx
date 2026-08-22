@@ -22,21 +22,31 @@ export function AuthProvider({ children }) {
 
     // Reivindica a sessão deste dispositivo (ver web/src/lib/sessionId.js)
     // antes de qualquer outra chamada — é o que faz o "quem sou eu" abaixo
-    // já valer a checagem de sessão única no backend.
+    // já valer a checagem de sessão única no backend. Retorna true quando o
+    // claim foi recusado por limite de acessos ou assinatura suspensa — aí
+    // não faz sentido seguir tentando carregar o resto do app.
     async function reivindicarSessao() {
       try {
         await apiClient.post("/me/sessao", {
           sessaoId: getOrCreateSessionId(),
           dispositivo: navigator.userAgent?.slice(0, 200),
         });
-      } catch {
-        // Melhor esforço: se o claim falhar (rede etc.), a checagem de
-        // sessão única simplesmente não vai bloquear ninguém até o próximo.
+        return false;
+      } catch (err) {
+        if (err.code === "LIMITE_ACESSOS_ATINGIDO" || err.code === "ASSINATURA_SUSPENSA") {
+          await encerrarSessaoLocal(err.message);
+          return true;
+        }
+        // Melhor esforço: se o claim falhar por outro motivo (rede etc.), a
+        // checagem de sessão única simplesmente não vai bloquear ninguém
+        // até o próximo.
+        return false;
       }
     }
 
     async function carregarMe() {
-      await reivindicarSessao();
+      const bloqueado = await reivindicarSessao();
+      if (bloqueado) return;
       try {
         const dados = await apiClient.get("/me");
         if (ativo) setMe(dados);
