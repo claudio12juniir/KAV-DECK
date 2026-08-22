@@ -107,6 +107,15 @@ export function AssinaturaPage() {
     return <Card>Carregando...</Card>;
   }
 
+  if (dados.semAssinatura) {
+    return (
+      <Card>
+        <h3>Sem assinatura ativa</h3>
+        <p>Esta empresa ainda não tem uma assinatura cadastrada no KAV DECK — fale com o suporte pra regularizar.</p>
+      </Card>
+    );
+  }
+
   const colunasPontos = [
     { key: "tipo", label: "Tipo", render: (row) => TIPO_LABEL[row.tipo] ?? row.tipo },
     { key: "valorMensal", label: "Valor/mês", render: (row) => formatarMoeda(row.valorMensal) },

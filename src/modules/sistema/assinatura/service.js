@@ -32,7 +32,25 @@ function diasEmAtraso(dataVencimentoAtual) {
 }
 
 export async function obterDashboard({ empresaId }) {
-  const assinatura = await getAssinaturaOrThrow(empresaId);
+  // Diferente das outras operações deste módulo (comprar/cancelar ponto,
+  // que exigem uma assinatura de verdade pra fazer sentido), o dashboard
+  // não pode simplesmente dar 404 — empresas criadas antes do sistema de
+  // assinaturas existir (ex.: o seed local) não têm AssinaturaEmpresa
+  // nenhuma, e a tela precisa mostrar um estado vazio explicável em vez de
+  // um erro vermelho.
+  const assinatura = await prisma.assinaturaEmpresa.findUnique({ where: { empresaId } });
+  if (!assinatura) {
+    return {
+      semAssinatura: true,
+      status: null,
+      proximaCobranca: null,
+      diasEmAtraso: 0,
+      pontosContratados: 0,
+      conectadosAgora: 0,
+      valorProximaCobranca: new Prisma.Decimal(0),
+      pontos: [],
+    };
+  }
 
   const pontos = await prisma.pontoAcesso.findMany({
     where: { empresaId, status: PONTOS_UTILIZAVEIS },
@@ -47,6 +65,7 @@ export async function obterDashboard({ empresaId }) {
     .reduce((soma, p) => soma.plus(p.valorMensal), new Prisma.Decimal(0));
 
   return {
+    semAssinatura: false,
     status: assinatura.status,
     proximaCobranca: assinatura.proximaCobranca,
     diasEmAtraso: diasEmAtraso(assinatura.dataVencimentoAtual),

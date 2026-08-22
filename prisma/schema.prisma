@@ -338,14 +338,24 @@ model PermissaoUsuario {
   @@map("permissoes_usuario")
 }
 
+// Os valores abaixo são o custo mensal fixo do colaborador pra empresa —
+// usados no relatório financeiro mensal (ver modules/gerenciais/relatorios)
+// pra compor o total de gastos com pessoal. Não são folha de pagamento de
+// verdade (sem histórico por competência, sem cálculo de rescisão etc.),
+// só o valor corrente que o admin cadastra manualmente.
 model Colaborador {
-  id           String          @id @default(uuid()) @db.Uuid
-  empresaId    String          @map("empresa_id") @db.Uuid
-  nome         String
-  tipo         TipoColaborador
-  ativo        Boolean         @default(true)
-  criadoEm     DateTime        @default(now()) @map("criado_em")
-  atualizadoEm DateTime        @updatedAt @map("atualizado_em")
+  id                   String          @id @default(uuid()) @db.Uuid
+  empresaId            String          @map("empresa_id") @db.Uuid
+  nome                 String
+  tipo                 TipoColaborador
+  ativo                Boolean         @default(true)
+  valorSalario         Decimal         @default(0) @map("valor_salario") @db.Decimal(14, 2)
+  valorValeAlimentacao Decimal         @default(0) @map("valor_vale_alimentacao") @db.Decimal(14, 2)
+  valorValeTransporte  Decimal         @default(0) @map("valor_vale_transporte") @db.Decimal(14, 2)
+  valorInss            Decimal         @default(0) @map("valor_inss") @db.Decimal(14, 2)
+  valorOutrosEncargos  Decimal         @default(0) @map("valor_outros_encargos") @db.Decimal(14, 2)
+  criadoEm             DateTime        @default(now()) @map("criado_em")
+  atualizadoEm         DateTime        @updatedAt @map("atualizado_em")
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
 

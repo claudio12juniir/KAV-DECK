@@ -1,7 +1,19 @@
 import { prisma } from "../../../lib/prisma.js";
 import { AppError } from "../../../utils/AppError.js";
 
-const SELECT = { id: true, nome: true, tipo: true, ativo: true, criadoEm: true, atualizadoEm: true };
+const SELECT = {
+  id: true,
+  nome: true,
+  tipo: true,
+  ativo: true,
+  valorSalario: true,
+  valorValeAlimentacao: true,
+  valorValeTransporte: true,
+  valorInss: true,
+  valorOutrosEncargos: true,
+  criadoEm: true,
+  atualizadoEm: true,
+};
 
 export async function list({ empresaId, skip, take, tipo }) {
   const where = { empresaId, ...(tipo ? { tipo } : {}) };
