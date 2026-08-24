@@ -14,6 +14,7 @@ datasource db {
 
 enum RoleUsuario {
   ADMIN
+  FUNCIONARIO
   COMPRADOR
   VENDEDOR
   SEPARADOR
@@ -171,47 +172,47 @@ model Empresa {
   criadoEm        DateTime @default(now()) @map("criado_em")
   atualizadoEm    DateTime @updatedAt @map("atualizado_em")
 
-  usuarios             Usuario[]
-  colaboradores        Colaborador[]
-  departamentos        Departamento[]
-  categorias           Categoria[]
-  unidadesMedida       UnidadeMedida[]
-  produtos             Produto[]
-  regrasIcms           RegraIcms[]
-  regrasIpi            RegraIpi[]
-  regrasPis            RegraPis[]
-  regrasCofins         RegraCofins[]
-  regrasIbs            RegraIbs[]
-  regrasCbs            RegraCbs[]
-  tabelasPreco         TabelaPreco[]
-  condicoesPagamento   CondicaoPagamento[]
-  participantes        Participante[]
-  gruposEmpresas       GrupoEmpresas[]
-  transportadoras      Transportadora[]
-  rotasEntrega         RotaEntrega[]
-  pedidosCompra        PedidoCompra[]
-  pedidosVenda         PedidoVenda[]
-  lotes                Lote[]
-  movimentosEstoque    MovimentoEstoque[]
-  inventariosFisicos   InventarioFisico[]
-  tiposCaixaEmbalagem  TipoCaixaEmbalagem[]
-  movimentosComodato   MovimentoComodato[]
-  titulosFinanceiros   TituloFinanceiro[]
-  movimentosCaixa      MovimentoCaixa[]
-  contasBancarias      ContaBancaria[]
-  planosContas         PlanoContas[]
-  centrosCusto         CentroCusto[]
-  chequesEmitidos      ChequeEmitido[]
-  chequesTerceiros     ChequeTerceiro[]
-  notasFiscais         NotaFiscal[]
-  ocorrencias          Ocorrencia[]
-  naturezasOperacao    NaturezaOperacao[]
-  certificadosDigitais CertificadoDigital[]
-  precosCompra         PrecoCompra[]
+  usuarios               Usuario[]
+  colaboradores          Colaborador[]
+  departamentos          Departamento[]
+  categorias             Categoria[]
+  unidadesMedida         UnidadeMedida[]
+  produtos               Produto[]
+  regrasIcms             RegraIcms[]
+  regrasIpi              RegraIpi[]
+  regrasPis              RegraPis[]
+  regrasCofins           RegraCofins[]
+  regrasIbs              RegraIbs[]
+  regrasCbs              RegraCbs[]
+  tabelasPreco           TabelaPreco[]
+  condicoesPagamento     CondicaoPagamento[]
+  participantes          Participante[]
+  gruposEmpresas         GrupoEmpresas[]
+  transportadoras        Transportadora[]
+  rotasEntrega           RotaEntrega[]
+  pedidosCompra          PedidoCompra[]
+  pedidosVenda           PedidoVenda[]
+  lotes                  Lote[]
+  movimentosEstoque      MovimentoEstoque[]
+  inventariosFisicos     InventarioFisico[]
+  tiposCaixaEmbalagem    TipoCaixaEmbalagem[]
+  movimentosComodato     MovimentoComodato[]
+  titulosFinanceiros     TituloFinanceiro[]
+  movimentosCaixa        MovimentoCaixa[]
+  contasBancarias        ContaBancaria[]
+  planosContas           PlanoContas[]
+  centrosCusto           CentroCusto[]
+  chequesEmitidos        ChequeEmitido[]
+  chequesTerceiros       ChequeTerceiro[]
+  notasFiscais           NotaFiscal[]
+  ocorrencias            Ocorrencia[]
+  naturezasOperacao      NaturezaOperacao[]
+  certificadosDigitais   CertificadoDigital[]
+  precosCompra           PrecoCompra[]
   tributacoesProdutoCfop TributacaoProdutoCfop[]
-  configuracaoFiscal   ConfiguracaoFiscal?
-  assinatura           AssinaturaEmpresa?
-  pontosAcesso         PontoAcesso[]
+  configuracaoFiscal     ConfiguracaoFiscal?
+  assinatura             AssinaturaEmpresa?
+  pontosAcesso           PontoAcesso[]
 
   @@map("empresas")
 }
@@ -255,13 +256,12 @@ model AssinaturaEmpresa {
   @@map("assinaturas_empresa")
 }
 
-// Cada linha é 1 licença de login concorrente ("ponto"). O limite de sessões
-// simultâneas da empresa (ver claimSessao em modules/auth/me/service.js) conta
-// quantos PontoAcesso estão utilizáveis agora (ATIVO ou CANCELAMENTO_AGENDADO
-// ainda dentro da vigência) — não importa qual Usuario ocupa qual ponto.
+// Cada linha é uma licença vinculada a uma conta interna. Cada Usuario ocupa
+// seu próprio acesso e continua limitado a uma sessão/dispositivo por vez.
 model PontoAcesso {
   id              String            @id @default(uuid()) @db.Uuid
   empresaId       String            @map("empresa_id") @db.Uuid
+  usuarioId       String?           @unique @map("usuario_id") @db.Uuid
   tipo            TipoPontoAcesso
   valorMensal     Decimal           @db.Decimal(10, 2)
   status          StatusPontoAcesso @default(ATIVO)
@@ -269,7 +269,8 @@ model PontoAcesso {
   criadoEm        DateTime          @default(now()) @map("criado_em")
   atualizadoEm    DateTime          @updatedAt @map("atualizado_em")
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
   @@index([empresaId, status])
   @@map("pontos_acesso")
@@ -292,6 +293,7 @@ model Usuario {
   bloqueiosSolicitados   BloqueioFinanceiroCliente[] @relation("BloqueioSolicitadoPor")
   bloqueiosAutorizados   BloqueioFinanceiroCliente[] @relation("BloqueioAutorizadoPor")
   sessaoAtiva            SessaoAtiva?
+  pontoAcesso            PontoAcesso?
 
   @@index([empresaId])
   @@map("usuarios")
@@ -483,7 +485,7 @@ model RegraIcms {
   criadoEm      DateTime @default(now()) @map("criado_em")
   atualizadoEm  DateTime @updatedAt @map("atualizado_em")
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  empresa            Empresa                 @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   tributacoesProduto TributacaoProdutoCfop[]
 
   @@index([empresaId])
@@ -499,7 +501,7 @@ model RegraIpi {
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  empresa            Empresa                 @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   tributacoesProduto TributacaoProdutoCfop[]
 
   @@index([empresaId])
@@ -515,7 +517,7 @@ model RegraPis {
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  empresa            Empresa                 @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   tributacoesProduto TributacaoProdutoCfop[]
 
   @@index([empresaId])
@@ -531,7 +533,7 @@ model RegraCofins {
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  empresa            Empresa                 @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   tributacoesProduto TributacaoProdutoCfop[]
 
   @@index([empresaId])
@@ -1365,8 +1367,8 @@ model Cfop {
   codigo    String @unique
   descricao String
 
-  naturezasOperacao NaturezaOperacao[]
-  itensNotaFiscal   ItemNotaFiscal[]
+  naturezasOperacao  NaturezaOperacao[]
+  itensNotaFiscal    ItemNotaFiscal[]
   tributacoesProduto TributacaoProdutoCfop[]
 
   @@map("cfops")

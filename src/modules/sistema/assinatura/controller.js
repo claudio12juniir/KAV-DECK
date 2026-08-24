@@ -6,8 +6,8 @@ export const dashboard = asyncHandler(async (req, res) => {
   res.json(resultado);
 });
 
-export const comprarPonto = asyncHandler(async (req, res) => {
-  const resultado = await service.comprarPonto({ empresaId: req.user.empresaId });
+export const comprarAcesso = asyncHandler(async (req, res) => {
+  const resultado = await service.comprarAcesso({ empresaId: req.user.empresaId, ...req.body });
   res.status(201).json(resultado);
 });
 

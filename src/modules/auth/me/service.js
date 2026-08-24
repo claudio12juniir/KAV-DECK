@@ -2,19 +2,7 @@ import { prisma } from "../../../lib/prisma.js";
 import { emitSessaoRevogada } from "../../../realtime/index.js";
 import { AppError } from "../../../utils/AppError.js";
 
-const PONTOS_UTILIZAVEIS = { in: ["ATIVO", "CANCELAMENTO_AGENDADO"] };
-
-// Quantas sessões de usuários distintos da empresa estão ocupadas agora vs.
-// quantos pontos de acesso ela tem pra oferecer — não importa qual Usuario
-// está em qual ponto, o limite é da empresa como um todo (ver
-// prisma/schema.prisma:PontoAcesso e claude.md / plano da Sprint 11).
-async function limiteDeAcessos(empresaId) {
-  const [ocupacaoAtual, pontosUtilizaveis] = await Promise.all([
-    prisma.sessaoAtiva.count({ where: { usuario: { empresaId } } }),
-    prisma.pontoAcesso.count({ where: { empresaId, status: PONTOS_UTILIZAVEIS } }),
-  ]);
-  return { ocupacaoAtual, pontosUtilizaveis };
-}
+const PONTOS_UTILIZAVEIS = ["ATIVO", "CANCELAMENTO_AGENDADO"];
 
 // Upsert por usuarioId (chave única em SessaoAtiva) — é o que garante "1
 // dispositivo por vez": reivindicar substitui a sessão anterior em vez de
@@ -27,18 +15,12 @@ export async function claimSessao({ usuarioId, empresaId, sessaoId, dispositivo 
     select: { sessaoId: true },
   });
 
-  // Só conta contra o limite quando este usuário ainda não ocupa nenhum
-  // ponto — reclamar a própria sessão de outro dispositivo move o mesmo
-  // slot, não abre um novo.
-  if (!anterior) {
-    const { ocupacaoAtual, pontosUtilizaveis } = await limiteDeAcessos(empresaId);
-    if (ocupacaoAtual >= pontosUtilizaveis) {
-      throw new AppError(
-        409,
-        "LIMITE_ACESSOS_ATINGIDO",
-        "Limite de acessos atingido — compre mais pontos ou aguarde alguém sair.",
-      );
-    }
+  const acesso = await prisma.pontoAcesso.findFirst({
+    where: { empresaId, usuarioId, status: { in: PONTOS_UTILIZAVEIS } },
+    select: { id: true },
+  });
+  if (!acesso) {
+    throw new AppError(403, "ACESSO_INTERNO_INATIVO", "Este usuário não possui um acesso interno ativo nesta empresa.");
   }
 
   const sessao = await prisma.sessaoAtiva.upsert({

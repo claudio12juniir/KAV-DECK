@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import { emitEmpresaSuspensa } from "../realtime/index.js";
+import { emitEmpresaSuspensa, emitSessaoRevogada } from "../realtime/index.js";
 
 const DIAS_CARENCIA = 10;
 const UMA_HORA_MS = 60 * 60 * 1000;
@@ -31,10 +31,24 @@ async function suspenderInadimplentes() {
 // Pontos extras cancelados só saem do ar quando o ciclo já pago termina —
 // ver dataFimVigencia setado em cancelarPonto (modules/sistema/assinatura).
 async function encerrarPontosAgendados() {
-  await prisma.pontoAcesso.updateMany({
+  const pontos = await prisma.pontoAcesso.findMany({
     where: { status: "CANCELAMENTO_AGENDADO", dataFimVigencia: { lte: new Date() } },
-    data: { status: "ENCERRADO" },
+    select: { id: true, usuarioId: true, usuario: { select: { sessaoAtiva: { select: { sessaoId: true } } } } },
   });
+  if (pontos.length === 0) return;
+
+  const pontoIds = pontos.map((p) => p.id);
+  const usuarioIds = pontos.map((p) => p.usuarioId).filter(Boolean);
+  await prisma.$transaction([
+    prisma.pontoAcesso.updateMany({ where: { id: { in: pontoIds } }, data: { status: "ENCERRADO" } }),
+    prisma.usuario.updateMany({ where: { id: { in: usuarioIds } }, data: { ativo: false } }),
+    prisma.sessaoAtiva.deleteMany({ where: { usuarioId: { in: usuarioIds } } }),
+  ]);
+  for (const ponto of pontos) {
+    if (ponto.usuario?.sessaoAtiva?.sessaoId) {
+      emitSessaoRevogada(ponto.usuario.sessaoAtiva.sessaoId, "Seu acesso interno foi encerrado.");
+    }
+  }
 }
 
 export async function rodarCicloAssinaturas() {

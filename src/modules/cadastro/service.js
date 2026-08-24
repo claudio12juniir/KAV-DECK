@@ -35,7 +35,7 @@ export async function criarEmpresaEAdmin({ usuarioId, email, razaoSocial, cnpj, 
     });
 
     await tx.pontoAcesso.create({
-      data: { empresaId: empresa.id, tipo: "PRINCIPAL", valorMensal: VALOR_PONTO_PRINCIPAL, status: "ATIVO" },
+      data: { empresaId: empresa.id, usuarioId: usuario.id, tipo: "PRINCIPAL", valorMensal: VALOR_PONTO_PRINCIPAL, status: "ATIVO" },
     });
 
     return { empresaId: empresa.id, usuarioId: usuario.id, assinaturaId: assinatura.id };

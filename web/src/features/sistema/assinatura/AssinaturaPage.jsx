@@ -3,6 +3,9 @@ import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
+import { Input } from "../../../components/ui/Input.jsx";
+import { Modal } from "../../../components/ui/Modal.jsx";
+import { Select } from "../../../components/ui/Select.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
@@ -24,7 +27,7 @@ const STATUS_LABEL = {
   SUSPENSA: "Suspensa",
 };
 
-const TIPO_LABEL = { PRINCIPAL: "Principal (admin sênior)", EXTRA: "Extra" };
+const TIPO_LABEL = { PRINCIPAL: "Principal", EXTRA: "Interno" };
 const PONTO_STATUS_LABEL = {
   ATIVO: "Ativo",
   CANCELAMENTO_AGENDADO: "Cancelamento agendado",
@@ -45,6 +48,8 @@ export function AssinaturaPage() {
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [comprando, setComprando] = useState(false);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [novoAcesso, setNovoAcesso] = useState({ nome: "", email: "", senha: "", role: "FUNCIONARIO" });
   const [cancelandoId, setCancelandoId] = useState(null);
 
   const temAcesso = PAPEIS_COM_ACESSO.includes(me?.role);
@@ -68,14 +73,17 @@ export function AssinaturaPage() {
 
   useRealtimeInvalidate("/sistema/assinatura", carregar);
 
-  async function comprarPonto() {
+  async function comprarAcesso(event) {
+    event.preventDefault();
     setComprando(true);
     try {
-      const resultado = await assinaturaApi.comprarPonto();
+      const resultado = await assinaturaApi.comprarAcesso(novoAcesso);
       setDados(resultado);
-      toast.success("Ponto extra comprado — já pode ser usado.");
+      setModalAberto(false);
+      setNovoAcesso({ nome: "", email: "", senha: "", role: "FUNCIONARIO" });
+      toast.success("Acesso interno criado — as novas credenciais já podem ser usadas.");
     } catch (err) {
-      toast.error(err.message ?? "Não foi possível comprar um novo ponto.");
+      toast.error(err.message ?? "Não foi possível criar o novo acesso.");
     } finally {
       setComprando(false);
     }
@@ -86,7 +94,7 @@ export function AssinaturaPage() {
     try {
       const resultado = await assinaturaApi.cancelarPonto(ponto.id);
       setDados(resultado);
-      toast.success("Ponto cancelado — continua ativo até o fim do ciclo já pago.");
+      toast.success("Cancelamento agendado — a conta continua ativa até o fim do ciclo já pago.");
     } catch (err) {
       toast.error(err.message ?? "Não foi possível cancelar este ponto.");
     } finally {
@@ -117,6 +125,13 @@ export function AssinaturaPage() {
   }
 
   const colunasPontos = [
+    { key: "usuario", label: "Usuário", render: (row) => row.usuario?.nome ?? "Não vinculado" },
+    { key: "email", label: "E-mail", render: (row) => row.usuario?.email ?? "—" },
+    {
+      key: "papel",
+      label: "Perfil",
+      render: (row) => row.usuario?.role === "ADMIN" ? "Administrador" : row.usuario ? "Funcionário" : "—",
+    },
     { key: "tipo", label: "Tipo", render: (row) => TIPO_LABEL[row.tipo] ?? row.tipo },
     { key: "valorMensal", label: "Valor/mês", render: (row) => formatarMoeda(row.valorMensal) },
     {
@@ -155,7 +170,7 @@ export function AssinaturaPage() {
     <div>
       <div style={{ marginBottom: "24px" }}>
         <h1>Assinatura</h1>
-        <p>Pontos de acesso da sua empresa no KAV DECK — cada ponto é uma licença de login simultâneo.</p>
+        <p>Contas internas vinculadas à empresa, cada uma com seu próprio e-mail, senha e perfil.</p>
       </div>
 
       <div
@@ -167,11 +182,11 @@ export function AssinaturaPage() {
         }}
       >
         <Card>
-          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>Pontos contratados</p>
+          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>Acessos contratados</p>
           <h2 style={{ margin: "4px 0 0" }}>{dados.pontosContratados}</h2>
         </Card>
         <Card>
-          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>Conectados agora</p>
+          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>Usuários conectados</p>
           <h2 style={{ margin: "4px 0 0" }}>{dados.conectadosAgora}</h2>
         </Card>
         <Card>
@@ -196,15 +211,40 @@ export function AssinaturaPage() {
 
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <h3 style={{ margin: 0 }}>Pontos de acesso</h3>
+          <h3 style={{ margin: 0 }}>Acessos internos</h3>
           {podeGerenciar && (
-            <Button loading={comprando} onClick={comprarPonto} disabled={dados.status !== "ATIVA"}>
-              Comprar ponto (+R$ 150,00/mês)
+            <Button onClick={() => setModalAberto(true)} disabled={dados.status !== "ATIVA"}>
+              Criar acesso (+R$ 150,00/mês)
             </Button>
           )}
         </div>
-        <DataTable columns={colunasPontos} rows={dados.pontos} emptyMessage="Nenhum ponto encontrado." />
+        <DataTable columns={colunasPontos} rows={dados.pontos} emptyMessage="Nenhum acesso encontrado." />
       </Card>
+
+      <Modal
+        open={modalAberto}
+        onClose={() => !comprando && setModalAberto(false)}
+        title="Criar acesso interno"
+        footer={(
+          <>
+            <Button variant="secondary" disabled={comprando} onClick={() => setModalAberto(false)}>Cancelar</Button>
+            <Button type="submit" form="form-novo-acesso" loading={comprando}>Criar e contratar</Button>
+          </>
+        )}
+      >
+        <form id="form-novo-acesso" onSubmit={comprarAcesso} style={{ display: "grid", gap: "14px" }}>
+          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>
+            A conta ficará vinculada a esta empresa e terá uma sessão própria por dispositivo.
+          </p>
+          <Input label="Nome" required value={novoAcesso.nome} onChange={(e) => setNovoAcesso((v) => ({ ...v, nome: e.target.value }))} />
+          <Input label="E-mail de acesso" type="email" required value={novoAcesso.email} onChange={(e) => setNovoAcesso((v) => ({ ...v, email: e.target.value }))} />
+          <Input label="Senha inicial" type="password" required minLength={8} hint="Mínimo de 8 caracteres." value={novoAcesso.senha} onChange={(e) => setNovoAcesso((v) => ({ ...v, senha: e.target.value }))} />
+          <Select label="Perfil" value={novoAcesso.role} onChange={(e) => setNovoAcesso((v) => ({ ...v, role: e.target.value }))}>
+            <option value="FUNCIONARIO">Funcionário</option>
+            <option value="ADMIN">Administrador</option>
+          </Select>
+        </form>
+      </Modal>
     </div>
   );
 }
