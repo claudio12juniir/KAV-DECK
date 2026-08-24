@@ -1,12 +1,15 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { GoArrowUpRight } from "react-icons/go";
-import { NavLink } from "react-router-dom";
 import "./CardNavMenu.css";
 
 const TONES = ["mono", "accent", "mono"];
 
-export function CardNavMenu({ brand = "KAV DECK", groups, onNavigate, ease = "power3.out" }) {
+// onAbrirAba(path, label) substitui a navegação real por <NavLink> — o
+// conteúdo agora mora dentro do sistema de abas (ver AppShell.jsx e
+// TabsContext.jsx), não na URL do navegador, então um clique aqui precisa
+// abrir/focar uma aba em vez de navegar de verdade.
+export function CardNavMenu({ brand = "KAV DECK", groups, onAbrirAba, ease = "power3.out" }) {
   const [isOpen, setIsOpen] = useState(false);
   const navRef = useRef(null);
   const cardsRef = useRef([]);
@@ -95,19 +98,18 @@ export function CardNavMenu({ brand = "KAV DECK", groups, onNavigate, ease = "po
               <div className="nav-card-label">{group.label}</div>
               <div className="nav-card-links">
                 {group.items.map((item) => (
-                  <NavLink
+                  <button
+                    type="button"
                     key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    className={({ isActive }) => `nav-card-link ${isActive ? "active" : ""}`}
+                    className="nav-card-link"
                     onClick={() => {
                       toggleMenu();
-                      onNavigate?.();
+                      onAbrirAba?.(item.to, item.label);
                     }}
                   >
                     <GoArrowUpRight className="nav-card-link-icon" aria-hidden="true" />
                     {item.label}
-                  </NavLink>
+                  </button>
                 ))}
               </div>
             </div>

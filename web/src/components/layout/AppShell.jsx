@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { FiDollarSign, FiHome, FiPackage, FiShoppingCart, FiTruck } from "react-icons/fi";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { CardNavMenu } from "../effects/CardNavMenu.jsx";
 import { Dock } from "../effects/Dock.jsx";
 import { useAuth } from "../../contexts/AuthContext.jsx";
+import { TabsProvider, useTabs } from "../../contexts/TabsContext.jsx";
+import { WorkspaceRoutes } from "../../routes/WorkspaceRoutes.jsx";
+import { TabsSidebar } from "./TabsSidebar.jsx";
 import "./AppShell.css";
 
 const NAV_GROUPS = [
@@ -14,6 +17,8 @@ const NAV_GROUPS = [
     label: "Estoque",
     items: [
       { to: "/estoque", label: "Lotes" },
+      { to: "/estoque/faturado", label: "Estoque faturado" },
+      { to: "/estoque/previa", label: "Prévia de estoque" },
       { to: "/estoque/inventarios", label: "Inventários" },
       { to: "/estoque/caixas-embalagem", label: "Caixas de embalagem" },
     ],
@@ -27,6 +32,12 @@ const NAV_GROUPS = [
       { to: "/cadastros/unidades-medida", label: "Unidades de medida" },
       { to: "/cadastros/condicoes-pagamento", label: "Condições de pagamento" },
       { to: "/cadastros/tabelas-preco", label: "Tabelas de preço" },
+      { to: "/cadastros/regras-icms", label: "ICMS" },
+      { to: "/cadastros/regras-ipi", label: "IPI" },
+      { to: "/cadastros/regras-pis", label: "PIS" },
+      { to: "/cadastros/regras-cofins", label: "COFINS" },
+      { to: "/cadastros/regras-ibs", label: "IBS" },
+      { to: "/cadastros/regras-cbs", label: "CBS" },
     ],
   },
   {
@@ -43,7 +54,9 @@ const NAV_GROUPS = [
   {
     label: "Financeiro",
     items: [
-      { to: "/financeiro/titulos", label: "Títulos" },
+      { to: "/financeiro/titulos/receber", label: "Contas a receber" },
+      { to: "/financeiro/titulos/pagar", label: "Contas a pagar" },
+      { to: "/financeiro/titulos", label: "Todos os títulos" },
       { to: "/financeiro/caixa", label: "Caixa" },
       { to: "/financeiro/contas-bancarias", label: "Contas bancárias" },
       { to: "/financeiro/plano-contas", label: "Plano de contas" },
@@ -59,6 +72,7 @@ const NAV_GROUPS = [
       { to: "/fiscal/naturezas-operacao", label: "Naturezas de operação" },
       { to: "/fiscal/certificados-digitais", label: "Certificados digitais" },
       { to: "/fiscal/cfop", label: "CFOP" },
+      { to: "/fiscal/tributacao-produto", label: "Tributação de produtos" },
     ],
   },
 ];
@@ -93,7 +107,10 @@ const MOBILE_GROUPS = [
   },
 ];
 
-function NavGroup({ group, onNavigate }) {
+// group.to (item de nível único, ex: "Início") ou group.items (dropdown)
+// sempre abrem/focam uma aba em vez de navegar a URL real — ver
+// TabsContext.jsx pro porquê.
+function NavGroup({ group, abaAtivaPath, onAbrirAba }) {
   const [aberto, setAberto] = useState(false);
   const ref = useRef(null);
 
@@ -108,14 +125,13 @@ function NavGroup({ group, onNavigate }) {
 
   if (group.to) {
     return (
-      <NavLink
-        to={group.to}
-        end={group.end}
-        className={({ isActive }) => `app-nav-link ${isActive ? "is-active" : ""}`}
-        onClick={onNavigate}
+      <button
+        type="button"
+        className={`app-nav-link ${abaAtivaPath === group.to ? "is-active" : ""}`}
+        onClick={() => onAbrirAba(group.to, group.label)}
       >
         {group.label}
-      </NavLink>
+      </button>
     );
   }
 
@@ -132,17 +148,17 @@ function NavGroup({ group, onNavigate }) {
       {aberto && (
         <div className="app-nav-dropdown">
           {group.items.map((item) => (
-            <NavLink
+            <button
+              type="button"
               key={item.to}
-              to={item.to}
-              className={({ isActive }) => `app-nav-dropdown-link ${isActive ? "is-active" : ""}`}
+              className={`app-nav-dropdown-link ${abaAtivaPath === item.to ? "is-active" : ""}`}
               onClick={() => {
                 setAberto(false);
-                onNavigate();
+                onAbrirAba(item.to, item.label);
               }}
             >
               {item.label}
-            </NavLink>
+            </button>
           ))}
         </div>
       )}
@@ -150,9 +166,9 @@ function NavGroup({ group, onNavigate }) {
   );
 }
 
-export function AppShell() {
+function AppShellConteudo() {
   const { me, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { tabs, activeTabId, openTab } = useTabs();
   const [scrolled, setScrolled] = useState(false);
 
   const navGroups = PAPEIS_COM_ACESSO_SISTEMA.includes(me?.role)
@@ -178,12 +194,14 @@ export function AppShell() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const abaAtiva = tabs.find((t) => t.id === activeTabId);
+
   const dockItems = [
-    { label: "Início", icon: <FiHome />, onClick: () => navigate("/") },
-    { label: "Novo pedido de venda", icon: <FiShoppingCart />, onClick: () => navigate("/vendas/novo") },
-    { label: "Novo pedido de compra", icon: <FiTruck />, onClick: () => navigate("/compras/novo") },
-    { label: "Estoque", icon: <FiPackage />, onClick: () => navigate("/estoque") },
-    { label: "Títulos", icon: <FiDollarSign />, onClick: () => navigate("/financeiro/titulos") },
+    { label: "Início", icon: <FiHome />, onClick: () => openTab("/", "Início") },
+    { label: "Novo pedido de venda", icon: <FiShoppingCart />, onClick: () => openTab("/vendas/novo", "Novo pedido de venda") },
+    { label: "Novo pedido de compra", icon: <FiTruck />, onClick: () => openTab("/compras/novo", "Novo pedido de compra") },
+    { label: "Estoque", icon: <FiPackage />, onClick: () => openTab("/estoque", "Estoque") },
+    { label: "Títulos", icon: <FiDollarSign />, onClick: () => openTab("/financeiro/titulos", "Títulos") },
   ];
 
   return (
@@ -196,7 +214,7 @@ export function AppShell() {
 
           <nav className="app-nav">
             {navGroups.map((group) => (
-              <NavGroup key={group.label} group={group} onNavigate={() => {}} />
+              <NavGroup key={group.label} group={group} abaAtivaPath={abaAtiva?.path} onAbrirAba={openTab} />
             ))}
           </nav>
 
@@ -209,13 +227,35 @@ export function AppShell() {
         </div>
       </header>
 
-      <CardNavMenu groups={MOBILE_GROUPS} />
+      <CardNavMenu groups={MOBILE_GROUPS} onAbrirAba={openTab} />
 
-      <main className="app-content container">
-        <Outlet />
-      </main>
+      <div className="app-body">
+        <TabsSidebar />
+
+        <main className="app-content container">
+          {/* Cada aba tem seu próprio <MemoryRouter> — todas ficam montadas o
+              tempo todo (só a ativa fica visível), por isso trocar de aba
+              preserva formulário, scroll, dado já carregado etc. sem
+              recarregar nada. */}
+          {tabs.map((tab) => (
+            <div key={tab.id} style={{ display: tab.id === activeTabId ? "block" : "none" }}>
+              <MemoryRouter initialEntries={[tab.path]}>
+                <WorkspaceRoutes />
+              </MemoryRouter>
+            </div>
+          ))}
+        </main>
+      </div>
 
       <Dock items={dockItems} />
     </div>
+  );
+}
+
+export function AppShell() {
+  return (
+    <TabsProvider tabInicial={{ path: "/", label: "Início" }}>
+      <AppShellConteudo />
+    </TabsProvider>
   );
 }

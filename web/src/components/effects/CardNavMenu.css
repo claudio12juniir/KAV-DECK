@@ -139,11 +139,16 @@
 }
 
 .nav-card-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
   text-decoration: none;
+  text-align: left;
   transition: opacity 0.2s var(--ease), color 0.2s var(--ease);
   display: inline-flex;
   align-items: center;

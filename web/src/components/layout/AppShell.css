@@ -51,6 +51,10 @@
 
 .app-nav-link {
   position: relative;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
   color: var(--color-nav-text);
   text-decoration: none;
   font-size: var(--text-sm);
@@ -113,6 +117,12 @@
 
 .app-nav-dropdown-link {
   display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
   color: var(--color-text);
   text-decoration: none;
   font-size: var(--text-sm);
@@ -157,9 +167,22 @@
   border-color: #fff;
 }
 
+/* Linha abaixo do topbar: barra lateral de abas + área de conteúdo. */
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .app-content {
   flex: 1;
   width: 100%;
+  /* Sem isso, um item de largura grande (tabela, etc.) dentro do conteúdo
+     empurra a coluna inteira e vaza por cima da barra de abas em vez de
+     simplesmente rolar dentro do próprio .app-content — mesma armadilha já
+     documentada pro menu do topo, agora se aplica aqui porque .app-content
+     virou item de um flex row, não mais o único filho de uma flex column. */
+  min-width: 0;
 }
 
 /* Compound selector (duas classes) de propósito: `.app-content` também leva
