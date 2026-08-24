@@ -85,7 +85,16 @@ export function SimpleCrudManager({
     setEditando(registro);
     setForm(
       Object.fromEntries(
-        fields.map((f) => [f.name, registro[f.name] ?? (f.type === "checkbox" ? false : "")]),
+        fields.map((f) => {
+          let valor = registro[f.name] ?? (f.type === "checkbox" ? false : "");
+          // <input type="date"> só aceita "AAAA-MM-DD" — o backend devolve
+          // datetime ISO completo (ex: "2026-08-24T00:00:00.000Z"), que sem
+          // esse corte fica em branco no campo em vez de vir preenchido.
+          if (f.type === "date" && typeof valor === "string" && valor.includes("T")) {
+            valor = valor.slice(0, 10);
+          }
+          return [f.name, valor];
+        }),
       ),
     );
     setModalAberto(true);

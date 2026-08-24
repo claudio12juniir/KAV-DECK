@@ -24,7 +24,11 @@ const fields = [
 const columns = [
   { key: "codigo", label: "Código" },
   { key: "descricao", label: "Descrição" },
-  { key: "precoReferencia", label: "Preço ref.", render: (row) => formatarMoeda(row.precoReferencia) },
+  {
+    key: "precoReferencia",
+    label: "Preço ref.",
+    render: (row) => (row.precoReferencia === undefined ? "—" : formatarMoeda(row.precoReferencia)),
+  },
   {
     key: "ativo",
     label: "Situação",

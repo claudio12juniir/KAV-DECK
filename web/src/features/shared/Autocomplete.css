@@ -33,7 +33,8 @@
   cursor: pointer;
   font-size: var(--text-sm);
 }
-.autocomplete-list button:hover {
+.autocomplete-list button:hover,
+.autocomplete-list button.ativo {
   background: var(--color-surface-sunken);
 }
 .autocomplete-list button span {

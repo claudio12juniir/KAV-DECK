@@ -110,18 +110,22 @@ export function TabelaPrecoItensPage() {
                       </div>
                     </td>
                     <td data-label="Preço">
-                      <input
-                        className="field-control"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        defaultValue={item.preco}
-                        onBlur={(e) => {
-                          if (e.target.value && Number(e.target.value) !== Number(item.preco)) {
-                            alterarPreco(item.produtoId, e.target.value);
-                          }
-                        }}
-                      />
+                      {item.preco === undefined ? (
+                        <span style={{ color: "var(--color-text-faint)" }}>Sem permissão para ver</span>
+                      ) : (
+                        <input
+                          className="field-control"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          defaultValue={item.preco}
+                          onBlur={(e) => {
+                            if (e.target.value && Number(e.target.value) !== Number(item.preco)) {
+                              alterarPreco(item.produtoId, e.target.value);
+                            }
+                          }}
+                        />
+                      )}
                     </td>
                     <td data-label="">
                       <button type="button" className="autocomplete-trocar" onClick={() => removerItem(item.produtoId)}>

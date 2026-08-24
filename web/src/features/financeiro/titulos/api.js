@@ -1,7 +1,27 @@
 import { apiClient } from "../../../lib/apiClient.js";
 
-export function listTitulos({ tipo, status, page, pageSize } = {}) {
-  return apiClient.get("/financeiro/titulos", { tipo, status, page, pageSize });
+export function listTitulos({
+  tipo,
+  status,
+  q,
+  vencimentoInicial,
+  vencimentoFinal,
+  ordenarPor,
+  ordem,
+  page,
+  pageSize,
+} = {}) {
+  return apiClient.get("/financeiro/titulos", {
+    tipo,
+    status,
+    q,
+    vencimentoInicial,
+    vencimentoFinal,
+    ordenarPor,
+    ordem,
+    page,
+    pageSize,
+  });
 }
 
 export function getTitulo(id) {

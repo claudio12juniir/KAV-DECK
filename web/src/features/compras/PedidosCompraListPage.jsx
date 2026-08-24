@@ -17,13 +17,13 @@ export function PedidosCompraListPage() {
   const toast = useToast();
   const [pedidos, setPedidos] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [status, setStatus] = useState("");
+  const [filtro, setFiltro] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let ativo = true;
     setCarregando(true);
-    listPedidosCompra({ status: status || undefined })
+    listPedidosCompra({ filtro: filtro || undefined })
       .then(({ items }) => {
         if (ativo) setPedidos(items);
       })
@@ -35,7 +35,7 @@ export function PedidosCompraListPage() {
       ativo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, refreshKey]);
+  }, [filtro, refreshKey]);
 
   useRealtimeInvalidate("/compras/pedidos", () => setRefreshKey((k) => k + 1));
 
@@ -43,6 +43,7 @@ export function PedidosCompraListPage() {
     { key: "fornecedor", label: "Fornecedor", render: (row) => row.fornecedor.participante.razaoSocial },
     { key: "status", label: "Status", render: (row) => <StatusBadge status={row.status} /> },
     { key: "dataEmissao", label: "Data", render: (row) => formatarData(row.dataEmissao) },
+    { key: "arquivado", label: "Arquivado", render: (row) => (row.arquivado ? "Sim" : "—") },
   ];
 
   return (
@@ -58,13 +59,12 @@ export function PedidosCompraListPage() {
       </div>
 
       <div style={{ maxWidth: "260px", marginBottom: "24px" }}>
-        <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <Select label="Filtro" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
           <option value="">Todos</option>
-          <option value="ABERTO">Aberto</option>
-          <option value="APROVADO">Aprovado</option>
-          <option value="RECEBIDO_PARCIAL">Recebido parcialmente</option>
-          <option value="RECEBIDO">Recebido</option>
+          <option value="EM_ABERTO">Em aberto</option>
+          <option value="LIQUIDADO">Liquidado</option>
           <option value="CANCELADO">Cancelado</option>
+          <option value="ARQUIVADO">Arquivado</option>
         </Select>
       </div>
 

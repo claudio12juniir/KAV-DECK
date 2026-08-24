@@ -4,11 +4,13 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
 import { Modal } from "../../../components/ui/Modal.jsx";
+import { Select } from "../../../components/ui/Select.jsx";
 import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
 import { baixarTitulo, cancelarTitulo, getTitulo } from "./api.js";
+import { FORMA_BAIXA_LABEL } from "./formaBaixa.js";
 import { StatusTituloBadge } from "./StatusTituloBadge.jsx";
 
 function formatarData(iso) {
@@ -99,7 +101,7 @@ export function TituloDetailPage() {
   const colunasBaixas = [
     { key: "dataBaixa", label: "Data", render: (row) => formatarData(row.dataBaixa) },
     { key: "valorBaixado", label: "Valor", render: (row) => formatarMoeda(row.valorBaixado) },
-    { key: "formaBaixa", label: "Forma" },
+    { key: "formaBaixa", label: "Forma", render: (row) => FORMA_BAIXA_LABEL[row.formaBaixa] ?? row.formaBaixa },
   ];
 
   return (
@@ -133,13 +135,14 @@ export function TituloDetailPage() {
               value={valorBaixado}
               onChange={(e) => setValorBaixado(e.target.value)}
             />
-            <Input
-              label="Forma de baixa"
-              placeholder="PIX, boleto, dinheiro..."
-              required
-              value={formaBaixa}
-              onChange={(e) => setFormaBaixa(e.target.value)}
-            />
+            <Select label="Forma de baixa" required value={formaBaixa} onChange={(e) => setFormaBaixa(e.target.value)}>
+              <option value="">Selecione...</option>
+              {Object.entries(FORMA_BAIXA_LABEL).map(([valor, rotulo]) => (
+                <option key={valor} value={valor}>
+                  {rotulo}
+                </option>
+              ))}
+            </Select>
             <Button type="submit" loading={salvandoBaixa} style={{ alignSelf: "flex-start" }}>
               Confirmar baixa
             </Button>

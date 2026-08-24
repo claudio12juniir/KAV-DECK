@@ -1,7 +1,11 @@
 import { apiClient } from "../../lib/apiClient.js";
 
-export function listPedidosCompra({ status, page, pageSize } = {}) {
-  return apiClient.get("/compras/pedidos", { status, page, pageSize });
+export function listPedidosCompra({ status, filtro, page, pageSize } = {}) {
+  return apiClient.get("/compras/pedidos", { status, filtro, page, pageSize });
+}
+
+export function arquivarPedidoCompra(id, arquivado) {
+  return apiClient.patch(`/compras/pedidos/${id}/arquivar`, { arquivado });
 }
 
 export function getPedidoCompra(id) {

@@ -10,6 +10,13 @@ export function AuthProvider({ children }) {
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sessaoEncerradaMotivo, setSessaoEncerradaMotivo] = useState(null);
+  // true quando o login no Supabase já existe mas a Empresa/Usuario ainda
+  // não foi criada (POST /cadastro/empresa nunca rodou) ou existe mas a
+  // assinatura está AGUARDANDO_PAGAMENTO — nos dois casos a sessão
+  // continua válida de propósito (ver App.jsx, AppGate), diferente de
+  // encerrarSessaoLocal, porque o usuário precisa dela pra terminar o
+  // cadastro/pagamento em /criar-conta.
+  const [precisaFinalizarCadastro, setPrecisaFinalizarCadastro] = useState(false);
 
   async function encerrarSessaoLocal(motivo) {
     clearSessionId();
@@ -33,8 +40,12 @@ export function AuthProvider({ children }) {
         });
         return false;
       } catch (err) {
-        if (err.code === "LIMITE_ACESSOS_ATINGIDO" || err.code === "ASSINATURA_SUSPENSA") {
+        if (err.code === "LIMITE_ACESSOS_ATINGIDO" || err.code === "ASSINATURA_SUSPENSA" || err.code === "USUARIO_INATIVO") {
           await encerrarSessaoLocal(err.message);
+          return true;
+        }
+        if (err.code === "ASSINATURA_PENDENTE" || err.code === "USUARIO_NAO_CADASTRADO") {
+          if (ativo) setPrecisaFinalizarCadastro(true);
           return true;
         }
         // Melhor esforço: se o claim falhar por outro motivo (rede etc.), a
@@ -45,6 +56,7 @@ export function AuthProvider({ children }) {
     }
 
     async function carregarMe() {
+      if (ativo) setPrecisaFinalizarCadastro(false);
       const bloqueado = await reivindicarSessao();
       if (bloqueado) return;
       try {
@@ -111,6 +123,7 @@ export function AuthProvider({ children }) {
         sessaoEncerradaMotivo,
         limparAvisoSessaoEncerrada,
         encerrarSessaoLocal,
+        precisaFinalizarCadastro,
       }}
     >
       {children}

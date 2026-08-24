@@ -34,6 +34,12 @@ export function LotesPage() {
 
   const columns = [
     { key: "produto", label: "Produto", render: (row) => `${row.produto.descricao} (${row.produto.codigo})` },
+    { key: "unidade", label: "UM", render: (row) => row.produto.unidadeMedida?.sigla ?? "—" },
+    {
+      key: "fatorConversao",
+      label: "Fator de conversão",
+      render: (row) => row.produto.unidadeMedida?.fatorConversao ?? "—",
+    },
     { key: "dataValidade", label: "Validade", render: (row) => formatarData(row.dataValidade) },
     { key: "quantidadeAtual", label: "Quantidade atual" },
     { key: "dataRecebimento", label: "Recebido em", render: (row) => formatarData(row.dataRecebimento) },

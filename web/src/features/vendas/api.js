@@ -1,7 +1,11 @@
 import { apiClient } from "../../lib/apiClient.js";
 
-export function listPedidosVenda({ status, page, pageSize } = {}) {
-  return apiClient.get("/vendas/pedidos", { status, page, pageSize });
+export function listPedidosVenda({ status, filtro, page, pageSize } = {}) {
+  return apiClient.get("/vendas/pedidos", { status, filtro, page, pageSize });
+}
+
+export function arquivarPedidoVenda(id, arquivado) {
+  return apiClient.patch(`/vendas/pedidos/${id}/arquivar`, { arquivado });
 }
 
 export function getPedidoVenda(id) {
@@ -26,4 +30,12 @@ export function getCliente(id) {
 
 export function faturarPedidoVenda(id, itens) {
   return apiClient.post(`/vendas/pedidos/${id}/faturar`, { itens });
+}
+
+export function addItemPedidoVenda(id, item) {
+  return apiClient.post(`/vendas/pedidos/${id}/itens`, item);
+}
+
+export function removeItemPedidoVenda(id, itemId) {
+  return apiClient.delete(`/vendas/pedidos/${id}/itens/${itemId}`);
 }

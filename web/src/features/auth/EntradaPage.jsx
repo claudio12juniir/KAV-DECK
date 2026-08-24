@@ -3,7 +3,7 @@ import { Button } from "../../components/ui/Button.jsx";
 import logoKavDeck from "../../assets/logo-kav-deck.png";
 import "./EntradaPage.css";
 
-// Tela alcançada por quem ainda não tem sessão (ver ProtectedRoute) — separa
+// Tela alcançada por quem ainda não tem sessão (ver App.jsx, AppGate) — separa
 // "já sou cliente" de "quero comprar o primeiro acesso" antes de cair direto
 // num formulário, em vez de esconder o cadastro atrás de um link discreto na
 // tela de login.

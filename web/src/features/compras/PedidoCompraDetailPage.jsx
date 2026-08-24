@@ -7,7 +7,7 @@ import { SkeletonLines } from "../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../components/ui/Table.jsx";
 import { useToast } from "../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
-import { getPedidoCompra, updatePedidoCompraStatus } from "./api.js";
+import { arquivarPedidoCompra, getPedidoCompra, updatePedidoCompraStatus } from "./api.js";
 import { StatusBadge } from "./components/StatusBadge.jsx";
 
 const TRANSICOES = {
@@ -35,6 +35,7 @@ export function PedidoCompraDetailPage() {
   const [erroCarregar, setErroCarregar] = useState("");
   const [transicaoEmAndamento, setTransicaoEmAndamento] = useState(null);
   const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
+  const [arquivando, setArquivando] = useState(false);
 
   async function carregar() {
     setCarregando(true);
@@ -67,6 +68,19 @@ export function PedidoCompraDetailPage() {
     } finally {
       setTransicaoEmAndamento(null);
       setConfirmarCancelamento(false);
+    }
+  }
+
+  async function handleAlternarArquivamento() {
+    setArquivando(true);
+    try {
+      await arquivarPedidoCompra(id, !pedido.arquivado);
+      toast.success(pedido.arquivado ? "Pedido desarquivado." : "Pedido arquivado.");
+      await carregar();
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível atualizar o arquivamento.");
+    } finally {
+      setArquivando(false);
     }
   }
 
@@ -104,7 +118,12 @@ export function PedidoCompraDetailPage() {
           <h1>{pedido.fornecedor.participante.razaoSocial}</h1>
           <p>{pedido.fornecedor.participante.cpfCnpj}</p>
         </div>
-        <StatusBadge status={pedido.status} />
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <StatusBadge status={pedido.status} />
+          <Button variant="ghost" onClick={handleAlternarArquivamento} loading={arquivando}>
+            {pedido.arquivado ? "Desarquivar" : "Arquivar"}
+          </Button>
+        </div>
       </div>
 
       <Card style={{ marginBottom: "24px" }}>
