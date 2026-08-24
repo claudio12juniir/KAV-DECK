@@ -9,7 +9,7 @@ export const list = asyncHandler(async (req, res) => {
 });
 
 export const getById = asyncHandler(async (req, res) => {
-  const tabela = await service.getById({ empresaId: req.user.empresaId, id: req.params.id });
+  const tabela = await service.getById({ empresaId: req.user.empresaId, id: req.params.id, usuario: req.user });
   res.json(tabela);
 });
 

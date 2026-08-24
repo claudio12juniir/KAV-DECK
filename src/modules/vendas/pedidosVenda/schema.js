@@ -61,3 +61,7 @@ export const atribuirItinerarioSchema = z
   .refine((data) => data.rotaEntregaId || data.turno, {
     message: "Informe rotaEntregaId e/ou turno.",
   });
+
+export const arquivarSchema = z.object({
+  arquivado: z.boolean(),
+});

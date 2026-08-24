@@ -45,6 +45,15 @@ export const CATALOGO_PERMISSOES = [
     descricao: "Dividir um título em aberto em títulos filhos, mantendo o valor total.",
     papeisPadrao: ["FINANCEIRO", "ADMIN"],
   },
+  {
+    modulo: "CADASTROS",
+    acao: "VER_PRECOS",
+    label: "Ver preços de produtos",
+    descricao:
+      "Ver o preço de referência do produto e os preços das tabelas de preço. Papéis de operação física " +
+      "(separador, estoque) ficam de fora por padrão — o admin pode liberar por usuário em Controle de Acesso.",
+    papeisPadrao: ["ADMIN", "GESTOR", "VENDEDOR", "COMPRADOR", "FINANCEIRO", "FISCAL"],
+  },
 ];
 
 export function buscarPapeisPadrao(modulo, acao) {

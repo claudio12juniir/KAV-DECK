@@ -8,6 +8,7 @@ import * as controller from "./controller.js";
 import {
   agruparNfSchema,
   aplicarDescontoSchema,
+  arquivarSchema,
   atribuirItinerarioSchema,
   createPedidoVendaSchema,
   dividirSchema,
@@ -23,6 +24,7 @@ router.use(auth);
 
 const listQuerySchema = paginationQuerySchema.extend({
   status: z.enum(["ABERTO", "SEPARACAO", "FATURADO", "CANCELADO"]).optional(),
+  filtro: z.enum(["EM_ABERTO", "LIQUIDADO", "CANCELADO", "AGRUPADO", "ARQUIVADO"]).optional(),
   separadorId: z.string().uuid().optional(),
   dataInicial: z.coerce.date().optional(),
   dataFinal: z.coerce.date().optional(),
@@ -96,4 +98,10 @@ router.patch(
   requireRole("VENDEDOR", "ADMIN"),
   validate({ params: idParamSchema, body: atribuirItinerarioSchema }),
   controller.atribuirItinerario,
+);
+router.patch(
+  "/:id/arquivar",
+  requireRole("VENDEDOR", "ADMIN"),
+  validate({ params: idParamSchema, body: arquivarSchema }),
+  controller.arquivar,
 );

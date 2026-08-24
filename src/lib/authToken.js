@@ -15,12 +15,14 @@ export async function verifyAccessToken(token) {
   return payload;
 }
 
+// Devolve o Usuario cru (mesmo se `ativo: false`) ou `null` só quando não
+// existe linha nenhuma — quem chama precisa diferenciar "nunca terminou o
+// cadastro" (sem linha, ver /cadastro/empresa) de "conta desativada pelo
+// admin" (linha existe, ativo: false), porque o tratamento no frontend é
+// diferente pros dois casos (ver src/middlewares/auth.js).
 export async function loadUsuarioFromPayload(payload) {
-  const usuario = await prisma.usuario.findUnique({
+  return prisma.usuario.findUnique({
     where: { id: payload.sub },
     select: { id: true, empresaId: true, role: true, ativo: true, nome: true, email: true, ultimoAcessoEm: true },
   });
-
-  if (!usuario || !usuario.ativo) return null;
-  return usuario;
 }

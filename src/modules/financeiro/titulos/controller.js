@@ -11,6 +11,11 @@ export const list = asyncHandler(async (req, res) => {
     tipo: req.query.tipo,
     status: req.query.status,
     participanteId: req.query.participanteId,
+    q: req.query.q,
+    vencimentoInicial: req.query.vencimentoInicial,
+    vencimentoFinal: req.query.vencimentoFinal,
+    ordenarPor: req.query.ordenarPor,
+    ordem: req.query.ordem,
   });
   res.json(buildPaginatedResult({ items, total, page, pageSize }));
 });

@@ -208,6 +208,7 @@ model Empresa {
   naturezasOperacao    NaturezaOperacao[]
   certificadosDigitais CertificadoDigital[]
   precosCompra         PrecoCompra[]
+  tributacoesProdutoCfop TributacaoProdutoCfop[]
   configuracaoFiscal   ConfiguracaoFiscal?
   assinatura           AssinaturaEmpresa?
   pontosAcesso         PontoAcesso[]
@@ -349,6 +350,12 @@ model Colaborador {
   nome                 String
   tipo                 TipoColaborador
   ativo                Boolean         @default(true)
+  // Identificação básica — opcional de propósito, porque nem toda empresa
+  // preenche isso na hora de só registrar um custo mensal. Nada disso vira
+  // login (isso é o model Usuario, sem relação com este).
+  cpf                  String?
+  telefone             String?
+  dataAdmissao         DateTime?       @map("data_admissao") @db.Date
   valorSalario         Decimal         @default(0) @map("valor_salario") @db.Decimal(14, 2)
   valorValeAlimentacao Decimal         @default(0) @map("valor_vale_alimentacao") @db.Decimal(14, 2)
   valorValeTransporte  Decimal         @default(0) @map("valor_vale_transporte") @db.Decimal(14, 2)
@@ -456,6 +463,7 @@ model Produto {
   itensInventario     ItemInventario[]
   itensNotaFiscal     ItemNotaFiscal[]
   precosCompra        PrecoCompra[]
+  tributacoesCfop     TributacaoProdutoCfop[]
 
   @@unique([empresaId, codigo])
   @@index([empresaId, ativo])
@@ -476,6 +484,7 @@ model RegraIcms {
   atualizadoEm  DateTime @updatedAt @map("atualizado_em")
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  tributacoesProduto TributacaoProdutoCfop[]
 
   @@index([empresaId])
   @@map("regras_icms")
@@ -491,6 +500,7 @@ model RegraIpi {
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  tributacoesProduto TributacaoProdutoCfop[]
 
   @@index([empresaId])
   @@map("regras_ipi")
@@ -506,6 +516,7 @@ model RegraPis {
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  tributacoesProduto TributacaoProdutoCfop[]
 
   @@index([empresaId])
   @@map("regras_pis")
@@ -521,6 +532,7 @@ model RegraCofins {
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  tributacoesProduto TributacaoProdutoCfop[]
 
   @@index([empresaId])
   @@map("regras_cofins")
@@ -799,6 +811,10 @@ model PedidoCompra {
   freteFaturado       Boolean            @default(false) @map("frete_faturado")
   dataEmissao         DateTime           @default(now()) @map("data_emissao")
   status              StatusPedidoCompra @default(ABERTO)
+  // Só esconde da listagem padrão — não é um status de fluxo (não impede
+  // nenhuma transição, um pedido arquivado continua CANCELADO/RECEBIDO/etc.
+  // por baixo). Ver filtro "Arquivado" nas telas de listagem.
+  arquivado           Boolean            @default(false)
   criadoEm            DateTime           @default(now()) @map("criado_em")
   atualizadoEm        DateTime           @updatedAt @map("atualizado_em")
 
@@ -874,6 +890,8 @@ model PedidoVenda {
   turno               TurnoEntrega?
   dataEmissao         DateTime          @default(now()) @map("data_emissao")
   status              StatusPedidoVenda @default(ABERTO)
+  // Mesma observação de PedidoCompra.arquivado — visibilidade, não fluxo.
+  arquivado           Boolean           @default(false)
   criadoEm            DateTime          @default(now()) @map("criado_em")
   atualizadoEm        DateTime          @updatedAt @map("atualizado_em")
 
@@ -1130,13 +1148,26 @@ model TituloFinanceiro {
   @@map("titulos_financeiros")
 }
 
+// Método de pagamento é só metadado aqui (registra como o título foi
+// liquidado) — não há integração real com gateway/banco nenhum, decisão
+// tomada de propósito pra não inflar o escopo do que foi pedido.
+enum FormaBaixaTitulo {
+  BOLETO
+  DEBITO_AUTOMATICO
+  CARTAO_CREDITO
+  PIX
+  DINHEIRO
+  CHEQUE
+  OUTRO
+}
+
 model BaixaTitulo {
-  id                 String   @id @default(uuid()) @db.Uuid
-  tituloFinanceiroId String   @map("titulo_financeiro_id") @db.Uuid
-  dataBaixa          DateTime @default(now()) @map("data_baixa")
-  valorBaixado       Decimal  @map("valor_baixado") @db.Decimal(14, 4)
-  formaBaixa         String   @map("forma_baixa")
-  criadoEm           DateTime @default(now()) @map("criado_em")
+  id                 String           @id @default(uuid()) @db.Uuid
+  tituloFinanceiroId String           @map("titulo_financeiro_id") @db.Uuid
+  dataBaixa          DateTime         @default(now()) @map("data_baixa")
+  valorBaixado       Decimal          @map("valor_baixado") @db.Decimal(14, 4)
+  formaBaixa         FormaBaixaTitulo @map("forma_baixa")
+  criadoEm           DateTime         @default(now()) @map("criado_em")
 
   tituloFinanceiro TituloFinanceiro @relation(fields: [tituloFinanceiroId], references: [id], onDelete: Cascade)
 
@@ -1336,8 +1367,44 @@ model Cfop {
 
   naturezasOperacao NaturezaOperacao[]
   itensNotaFiscal   ItemNotaFiscal[]
+  tributacoesProduto TributacaoProdutoCfop[]
 
   @@map("cfops")
+}
+
+// Liga um Produto a um CFOP com as regras de ICMS/IPI/PIS/COFINS que valem
+// quando esse produto sai por essa operação — CFOP já distingue
+// intra/interestadual, venda/devolução/transferência etc., então não
+// precisa de um conceito de "operação" à parte. Usado por
+// src/modules/fiscal/notasFiscais/service.js pra calcular os valores de
+// imposto do item automaticamente (antes desse model existir, valorIcms/
+// valorIpi/valorPis/valorCofins eram digitados manualmente no item).
+// Todos os *Id são opcionais porque nem todo produto tem os 4 tributos
+// aplicáveis (ex.: produto perecível costuma ser isento de IPI).
+model TributacaoProdutoCfop {
+  id           String   @id @default(uuid()) @db.Uuid
+  empresaId    String   @map("empresa_id") @db.Uuid
+  produtoId    String   @map("produto_id") @db.Uuid
+  cfopId       String   @map("cfop_id") @db.Uuid
+  icmsId       String?  @map("icms_id") @db.Uuid
+  ipiId        String?  @map("ipi_id") @db.Uuid
+  pisId        String?  @map("pis_id") @db.Uuid
+  cofinsId     String?  @map("cofins_id") @db.Uuid
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  empresa Empresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  produto Produto      @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  cfop    Cfop         @relation(fields: [cfopId], references: [id], onDelete: Restrict)
+  icms    RegraIcms?   @relation(fields: [icmsId], references: [id], onDelete: SetNull)
+  ipi     RegraIpi?    @relation(fields: [ipiId], references: [id], onDelete: SetNull)
+  pis     RegraPis?    @relation(fields: [pisId], references: [id], onDelete: SetNull)
+  cofins  RegraCofins? @relation(fields: [cofinsId], references: [id], onDelete: SetNull)
+
+  @@unique([produtoId, cfopId])
+  @@index([empresaId])
+  @@index([cfopId])
+  @@map("tributacoes_produto_cfop")
 }
 
 model NaturezaOperacao {

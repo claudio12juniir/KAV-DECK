@@ -11,12 +11,13 @@ export const list = asyncHandler(async (req, res) => {
     take,
     ativo,
     q: req.query.q,
+    usuario: req.user,
   });
   res.json(buildPaginatedResult({ items, total, page, pageSize }));
 });
 
 export const getById = asyncHandler(async (req, res) => {
-  const produto = await service.getById({ empresaId: req.user.empresaId, id: req.params.id });
+  const produto = await service.getById({ empresaId: req.user.empresaId, id: req.params.id, usuario: req.user });
   res.json(produto);
 });
 

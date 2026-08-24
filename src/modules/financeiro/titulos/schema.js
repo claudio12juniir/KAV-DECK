@@ -1,15 +1,25 @@
 import { z } from "zod";
 import { decimalString, paginationQuerySchema } from "../../../utils/commonSchemas.js";
 
+// Espelha o enum FormaBaixaTitulo do schema.prisma — como forma de pagar é
+// só metadado (não há integração real de gateway, ver decisão da sessão),
+// bastou trocar o texto livre por um conjunto fechado de opções.
+export const FORMAS_BAIXA = ["BOLETO", "DEBITO_AUTOMATICO", "CARTAO_CREDITO", "PIX", "DINHEIRO", "CHEQUE", "OUTRO"];
+
 export const listTitulosQuerySchema = paginationQuerySchema.extend({
   tipo: z.enum(["PAGAR", "RECEBER"]).optional(),
   status: z.enum(["ABERTO", "BAIXADO", "VENCIDO", "CANCELADO"]).optional(),
   participanteId: z.string().uuid().optional(),
+  q: z.string().trim().min(1).max(120).optional(),
+  vencimentoInicial: z.coerce.date().optional(),
+  vencimentoFinal: z.coerce.date().optional(),
+  ordenarPor: z.enum(["vencimento", "valor", "numero"]).optional(),
+  ordem: z.enum(["asc", "desc"]).optional(),
 });
 
 export const baixaSchema = z.object({
   valorBaixado: decimalString(),
-  formaBaixa: z.string().min(1).max(60),
+  formaBaixa: z.enum(FORMAS_BAIXA),
   dataBaixa: z.coerce.date().optional(),
 });
 
@@ -19,7 +29,7 @@ export const baixarLoteSchema = z.object({
       z.object({
         tituloId: z.string().uuid(),
         valorBaixado: decimalString(),
-        formaBaixa: z.string().min(1).max(60),
+        formaBaixa: z.enum(FORMAS_BAIXA),
         dataBaixa: z.coerce.date().optional(),
       }),
     )

@@ -1,4 +1,5 @@
 import { prisma } from "../../../lib/prisma.js";
+import { usuarioPodePermissao } from "../../../middlewares/rbac.js";
 import { AppError } from "../../../utils/AppError.js";
 
 const SELECT = {
@@ -31,10 +32,17 @@ export async function list({ empresaId, skip, take }) {
   return { items, total };
 }
 
-export async function getById({ empresaId, id }) {
+// Mesma redação de preço aplicada em cadastros/produtos/service.js — ver
+// comentário lá. Aqui é o preço de venda por tabela, ainda mais sensível
+// que o preço de referência do produto.
+export async function getById({ empresaId, id, usuario }) {
   const tabela = await prisma.tabelaPreco.findFirst({ where: { id, empresaId }, select: SELECT_WITH_ITENS });
   if (!tabela) throw new AppError(404, "NOT_FOUND", "Tabela de preço não encontrada.");
-  return tabela;
+  if (!usuario) return tabela;
+
+  const podeVer = await usuarioPodePermissao(usuario, "CADASTROS", "VER_PRECOS");
+  if (podeVer) return tabela;
+  return { ...tabela, itens: tabela.itens.map(({ preco, ...resto }) => resto) };
 }
 
 async function ensureOwnership({ empresaId, id }) {

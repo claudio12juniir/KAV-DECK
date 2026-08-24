@@ -24,6 +24,7 @@ const SELECT_HEADER = {
   freteFaturado: true,
   dataEmissao: true,
   status: true,
+  arquivado: true,
   criadoEm: true,
   atualizadoEm: true,
   fornecedor: { select: { participante: { select: { razaoSocial: true, cpfCnpj: true } } } },
@@ -86,8 +87,31 @@ async function getPedidoOrThrow({ empresaId, id, select = SELECT_DETAIL }) {
   return pedido;
 }
 
-export async function list({ empresaId, skip, take, status }) {
-  const where = { empresaId, ...(status ? { status } : {}) };
+// Mesmo raciocínio do filtro de PedidoVenda (ver whereDoFiltro em
+// vendas/pedidosVenda/service.js) — aqui não existe "AGRUPADO" porque
+// PedidoCompra não tem equivalente ao agrupamento de NF de venda.
+function whereDoFiltro(filtro) {
+  switch (filtro) {
+    case "EM_ABERTO":
+      return { status: "ABERTO", arquivado: false };
+    case "CANCELADO":
+      return { status: "CANCELADO", arquivado: false };
+    case "LIQUIDADO":
+      return {
+        status: "RECEBIDO",
+        arquivado: false,
+        titulosFinanceiros: { some: {} },
+        NOT: { titulosFinanceiros: { some: { status: { not: "BAIXADO" } } } },
+      };
+    case "ARQUIVADO":
+      return { arquivado: true };
+    default:
+      return {};
+  }
+}
+
+export async function list({ empresaId, skip, take, status, filtro }) {
+  const where = { empresaId, ...(status ? { status } : {}), ...whereDoFiltro(filtro) };
   const [items, total] = await Promise.all([
     prisma.pedidoCompra.findMany({ where, select: SELECT_HEADER, skip, take, orderBy: { dataEmissao: "desc" } }),
     prisma.pedidoCompra.count({ where }),
@@ -459,4 +483,11 @@ export async function aplicarFrete({ empresaId, id, transportadoraId, valorFrete
     data: { valorFrete, ...(transportadoraId ? { transportadoraId } : {}) },
     select: SELECT_DETAIL,
   });
+}
+
+// Arquivar é só visibilidade, funciona em qualquer status — ver comentário
+// do campo arquivado no schema.prisma.
+export async function arquivar({ empresaId, id, arquivado }) {
+  await getPedidoOrThrow({ empresaId, id, select: { id: true } });
+  return prisma.pedidoCompra.update({ where: { id }, data: { arquivado }, select: SELECT_DETAIL });
 }

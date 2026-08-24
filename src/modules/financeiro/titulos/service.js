@@ -103,15 +103,47 @@ async function getTituloOrThrow({ empresaId, id, select = SELECT_DETAIL, client 
   return titulo;
 }
 
-export async function list({ empresaId, skip, take, tipo, status, participanteId }) {
+export async function list({
+  empresaId,
+  skip,
+  take,
+  tipo,
+  status,
+  participanteId,
+  q,
+  vencimentoInicial,
+  vencimentoFinal,
+  ordenarPor = "vencimento",
+  ordem = "asc",
+}) {
   const where = {
     empresaId,
     ...(tipo ? { tipo } : {}),
     ...(status ? { status } : {}),
     ...(participanteId ? { participanteId } : {}),
+    ...(vencimentoInicial || vencimentoFinal
+      ? { vencimento: { ...(vencimentoInicial ? { gte: vencimentoInicial } : {}), ...(vencimentoFinal ? { lte: vencimentoFinal } : {}) } }
+      : {}),
+    // Busca por número do título OU nome do participante — cobre os dois
+    // jeitos mais comuns de alguém procurar um título ("qual o da nota
+    // 123" vs. "quanto o Mercado X me deve").
+    ...(q
+      ? {
+          OR: [
+            { numero: { contains: q, mode: "insensitive" } },
+            { participante: { razaoSocial: { contains: q, mode: "insensitive" } } },
+          ],
+        }
+      : {}),
   };
   const [items, total] = await Promise.all([
-    prisma.tituloFinanceiro.findMany({ where, select: SELECT_HEADER, skip, take, orderBy: { vencimento: "asc" } }),
+    prisma.tituloFinanceiro.findMany({
+      where,
+      select: SELECT_HEADER,
+      skip,
+      take,
+      orderBy: { [ordenarPor]: ordem },
+    }),
     prisma.tituloFinanceiro.count({ where }),
   ]);
   return { items, total };

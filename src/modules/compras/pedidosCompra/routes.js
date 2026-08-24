@@ -7,6 +7,7 @@ import { idParamSchema, paginationQuerySchema } from "../../../utils/commonSchem
 import * as controller from "./controller.js";
 import {
   aplicarFreteSchema,
+  arquivarSchema,
   createPedidoCompraSchema,
   estornarLoteSchema,
   favoritosQuerySchema,
@@ -23,6 +24,7 @@ router.use(auth);
 
 const listQuerySchema = paginationQuerySchema.extend({
   status: z.enum(["ABERTO", "APROVADO", "RECEBIDO_PARCIAL", "RECEBIDO", "CANCELADO"]).optional(),
+  filtro: z.enum(["EM_ABERTO", "LIQUIDADO", "CANCELADO", "ARQUIVADO"]).optional(),
 });
 const itemParamSchema = z.object({ id: z.string().uuid(), itemId: z.string().uuid() });
 
@@ -83,4 +85,10 @@ router.patch(
   requireRole("COMPRADOR", "ADMIN"),
   validate({ params: idParamSchema, body: aplicarFreteSchema }),
   controller.aplicarFrete,
+);
+router.patch(
+  "/:id/arquivar",
+  requireRole("COMPRADOR", "ADMIN"),
+  validate({ params: idParamSchema, body: arquivarSchema }),
+  controller.arquivar,
 );

@@ -1,5 +1,18 @@
 import { prisma } from "../../../lib/prisma.js";
+import { usuarioPodePermissao } from "../../../middlewares/rbac.js";
 import { AppError } from "../../../utils/AppError.js";
+
+// Remove precoReferencia da resposta (não deixa como null — null seria
+// indistinguível de "produto sem preço cadastrado") quando o usuário não
+// tem a permissão CADASTROS.VER_PRECOS efetiva (ver Controle de Acesso).
+// `usuario` ausente (chamadas internas de create/update/remove, já
+// protegidas por requireRole ADMIN/GESTOR na rota) sempre mostra o preço.
+async function redigirPrecos(produtos, usuario) {
+  if (!usuario) return produtos;
+  const podeVer = await usuarioPodePermissao(usuario, "CADASTROS", "VER_PRECOS");
+  if (podeVer) return produtos;
+  return produtos.map(({ precoReferencia, ...resto }) => resto);
+}
 
 const SELECT = {
   id: true,
@@ -42,7 +55,7 @@ async function ensureReferences({ empresaId, unidadeMedidaId, categoriaId }) {
   await Promise.all(checks);
 }
 
-export async function list({ empresaId, skip, take, ativo, q }) {
+export async function list({ empresaId, skip, take, ativo, q, usuario }) {
   const where = {
     empresaId,
     ...(ativo !== undefined ? { ativo } : {}),
@@ -56,13 +69,14 @@ export async function list({ empresaId, skip, take, ativo, q }) {
     prisma.produto.findMany({ where, select: SELECT, skip, take, orderBy: { descricao: "asc" } }),
     prisma.produto.count({ where }),
   ]);
-  return { items, total };
+  return { items: await redigirPrecos(items, usuario), total };
 }
 
-export async function getById({ empresaId, id }) {
+export async function getById({ empresaId, id, usuario }) {
   const produto = await prisma.produto.findFirst({ where: { id, empresaId }, select: SELECT });
   if (!produto) throw new AppError(404, "NOT_FOUND", "Produto não encontrado.");
-  return produto;
+  const [redigido] = await redigirPrecos([produto], usuario);
+  return redigido;
 }
 
 export async function create({ empresaId, data }) {

@@ -53,6 +53,7 @@ import { router as certificadosDigitaisRouter } from "../modules/fiscal/certific
 import { router as notasFiscaisRouter } from "../modules/fiscal/notasFiscais/routes.js";
 import { router as utilitariosFiscaisRouter } from "../modules/fiscal/utilitarios/routes.js";
 import { router as configuracoesFiscaisRouter } from "../modules/fiscal/configuracoes/routes.js";
+import { router as tributacaoProdutoRouter } from "../modules/fiscal/tributacaoProduto/routes.js";
 
 import { router as controleAcessoRouter } from "../modules/sistema/controleAcesso/routes.js";
 import { router as minhaEmpresaRouter } from "../modules/sistema/minhaEmpresa/routes.js";
@@ -136,6 +137,7 @@ router.use("/fiscal/certificados-digitais", certificadosDigitaisRouter);
 router.use("/fiscal/notas", notasFiscaisRouter);
 router.use("/fiscal/utilitarios", utilitariosFiscaisRouter);
 router.use("/fiscal/configuracoes", configuracoesFiscaisRouter);
+router.use("/fiscal/tributacao-produto", tributacaoProdutoRouter);
 
 router.use("/sistema/controle-acesso", controleAcessoRouter);
 router.use("/sistema/minha-empresa", minhaEmpresaRouter);

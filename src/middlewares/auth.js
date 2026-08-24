@@ -17,9 +17,18 @@ async function autenticar(req) {
     throw new AppError(401, "UNAUTHORIZED", "Token de autenticação inválido ou expirado.");
   }
 
+  // Sem linha nenhuma de Usuario = login do Supabase confirmado mas
+  // POST /cadastro/empresa nunca rodou (ex.: confirmação de e-mail
+  // interrompeu o fluxo de /criar-conta antes desse passo). Código
+  // diferente de "inativo" de propósito: o frontend manda um caso pra
+  // retomar o cadastro e o outro pra deslogar com aviso — ver
+  // web/src/contexts/AuthContext.jsx.
   const usuario = await loadUsuarioFromPayload(payload);
   if (!usuario) {
-    throw new AppError(403, "FORBIDDEN", "Usuário não encontrado ou inativo.");
+    throw new AppError(403, "USUARIO_NAO_CADASTRADO", "Nenhum cadastro de empresa encontrado para este login.");
+  }
+  if (!usuario.ativo) {
+    throw new AppError(403, "USUARIO_INATIVO", "Seu acesso foi desativado. Fale com o administrador da sua empresa.");
   }
 
   req.user = {
@@ -41,6 +50,20 @@ async function autenticar(req) {
   });
   if (assinatura?.status === "SUSPENSA") {
     throw new AppError(402, "ASSINATURA_SUSPENSA", "ACESSO NEGADO! PAGAMENTO EM ATRASO");
+  }
+  // AGUARDANDO_PAGAMENTO é o status inicial de toda empresa recém-criada
+  // (ver src/modules/cadastro/service.js) — sem essa checagem, uma empresa
+  // que nunca completou o checkout do Mercado Pago tinha acesso total e
+  // gratuito ao sistema para sempre. Diferente de SUSPENSA (código próprio)
+  // porque aqui o usuário ainda precisa conseguir chegar até a tela de
+  // pagamento — o frontend usa o código pra redirecionar pra lá em vez de
+  // simplesmente deslogar.
+  if (assinatura?.status === "AGUARDANDO_PAGAMENTO") {
+    throw new AppError(
+      402,
+      "ASSINATURA_PENDENTE",
+      "Finalize o pagamento da assinatura para acessar o sistema.",
+    );
   }
 
   // "Histórico de login" real (via login de fato) exigiria a Admin API da

@@ -10,7 +10,14 @@ const PEDIDO_VENDA_PENDENTE = ["ABERTO", "SEPARACAO"];
 export async function consultar({ empresaId, produtoId }) {
   const produtos = await prisma.produto.findMany({
     where: { empresaId, ativo: true, ...(produtoId ? { id: produtoId } : {}) },
-    select: { id: true, codigo: true, descricao: true, estoqueMinimo: true, estoqueMaximo: true },
+    select: {
+      id: true,
+      codigo: true,
+      descricao: true,
+      estoqueMinimo: true,
+      estoqueMaximo: true,
+      unidadeMedida: { select: { sigla: true, fatorConversao: true } },
+    },
   });
   if (!produtos.length) return [];
 
@@ -39,6 +46,7 @@ export async function consultar({ empresaId, produtoId }) {
       produtoId: produto.id,
       codigo: produto.codigo,
       descricao: produto.descricao,
+      unidadeMedida: produto.unidadeMedida,
       saldo: saldo.toFixed(4),
       minimo: produto.estoqueMinimo,
       maximo: produto.estoqueMaximo,

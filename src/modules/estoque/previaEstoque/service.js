@@ -48,7 +48,12 @@ export async function consultar({ empresaId, produtoId }) {
 
   const produtos = await prisma.produto.findMany({
     where: { id: { in: [...produtoIds] } },
-    select: { id: true, codigo: true, descricao: true },
+    select: {
+      id: true,
+      codigo: true,
+      descricao: true,
+      unidadeMedida: { select: { sigla: true, fatorConversao: true } },
+    },
   });
 
   const mapaSaldo = new Map(lotes.map((l) => [l.produtoId, l._sum.quantidadeAtual]));
@@ -68,6 +73,7 @@ export async function consultar({ empresaId, produtoId }) {
       produtoId: produto.id,
       codigo: produto.codigo,
       descricao: produto.descricao,
+      unidadeMedida: produto.unidadeMedida,
       saldoAtual: saldoAtual.toFixed(4),
       aReceber: aReceber.toFixed(4),
       aEntregar: aEntregar.toFixed(4),

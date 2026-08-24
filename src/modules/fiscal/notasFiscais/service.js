@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../../lib/prisma.js";
 import { AppError } from "../../../utils/AppError.js";
 import { enviarNotaPorEmail } from "./email.js";
@@ -107,6 +108,51 @@ async function ensureItensReferences({ empresaId, itens }) {
   }
 }
 
+// Preenche valorIcms/valorIpi/valorPis/valorCofins de quem não mandou
+// explicitamente, usando a regra cadastrada em TributacaoProdutoCfop pra
+// esse (produto, CFOP) — ver o comentário do model no schema.prisma. Item
+// sem regra configurada pra essa combinação fica com os valores em 0 (não é
+// erro: nem todo produto/CFOP tem tributação cadastrada ainda) e o CST
+// digitado na mão continua funcionando pra quem prefere não usar a regra.
+// RegraIcms.baseCalculo é tratado como um percentual de redução sobre o
+// valor do próprio item (comum em produtos de cesta básica), não um valor
+// fixo — só assim o campo faz sentido reutilizado entre itens de valores
+// diferentes.
+async function calcularImpostosItens({ empresaId, itens }) {
+  if (!itens.length) return itens;
+
+  const pares = itens.map((item) => ({ produtoId: item.produtoId, cfopId: item.cfopId }));
+  const regras = await prisma.tributacaoProdutoCfop.findMany({
+    where: { empresaId, OR: pares },
+    include: { icms: true, ipi: true, pis: true, cofins: true },
+  });
+  const porChave = new Map(regras.map((r) => [`${r.produtoId}:${r.cfopId}`, r]));
+
+  return itens.map((item) => {
+    const regra = porChave.get(`${item.produtoId}:${item.cfopId}`);
+    if (!regra) return item;
+
+    const valorItem = new Prisma.Decimal(item.quantidade).times(item.valorUnitario);
+    const calculado = {};
+
+    if (item.valorIcms === undefined && regra.icms) {
+      const baseCalculo = valorItem.times(regra.icms.baseCalculo).dividedBy(100);
+      calculado.valorIcms = baseCalculo.times(regra.icms.aliquota).dividedBy(100).toFixed(4);
+    }
+    if (item.valorIpi === undefined && regra.ipi) {
+      calculado.valorIpi = valorItem.times(regra.ipi.aliquota).dividedBy(100).toFixed(4);
+    }
+    if (item.valorPis === undefined && regra.pis) {
+      calculado.valorPis = valorItem.times(regra.pis.aliquota).dividedBy(100).toFixed(4);
+    }
+    if (item.valorCofins === undefined && regra.cofins) {
+      calculado.valorCofins = valorItem.times(regra.cofins.aliquota).dividedBy(100).toFixed(4);
+    }
+
+    return { ...item, ...calculado };
+  });
+}
+
 async function getNotaOrThrow({ empresaId, id, select = SELECT_DETAIL }) {
   const nota = await prisma.notaFiscal.findFirst({ where: { id, empresaId }, select });
   if (!nota) throw new AppError(404, "NOT_FOUND", "Nota fiscal não encontrada.");
@@ -137,9 +183,10 @@ export async function create({ empresaId, data }) {
 
   await ensureReferences({ empresaId, ...rest });
   await ensureItensReferences({ empresaId, itens });
+  const itensComImpostos = await calcularImpostosItens({ empresaId, itens });
 
   return prisma.notaFiscal.create({
-    data: { ...rest, empresaId, itens: itens.length ? { create: itens } : undefined },
+    data: { ...rest, empresaId, itens: itensComImpostos.length ? { create: itensComImpostos } : undefined },
     select: SELECT_DETAIL,
   });
 }
@@ -151,10 +198,21 @@ export async function addItem({ empresaId, notaFiscalId, data }) {
   }
 
   await ensureItensReferences({ empresaId, itens: [data] });
+  const [itemComImpostos] = await calcularImpostosItens({ empresaId, itens: [data] });
 
   return prisma.itemNotaFiscal.create({
-    data: { ...data, notaFiscalId },
-    select: { id: true, produtoId: true, cfopId: true, quantidade: true, valorUnitario: true },
+    data: { ...itemComImpostos, notaFiscalId },
+    select: {
+      id: true,
+      produtoId: true,
+      cfopId: true,
+      quantidade: true,
+      valorUnitario: true,
+      valorIcms: true,
+      valorIpi: true,
+      valorPis: true,
+      valorCofins: true,
+    },
   });
 }
 

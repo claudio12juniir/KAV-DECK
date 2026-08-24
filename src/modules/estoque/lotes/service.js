@@ -14,7 +14,13 @@ const SELECT = {
   quantidadeAtual: true,
   criadoEm: true,
   atualizadoEm: true,
-  produto: { select: { codigo: true, descricao: true } },
+  produto: {
+    select: {
+      codigo: true,
+      descricao: true,
+      unidadeMedida: { select: { sigla: true, fatorConversao: true } },
+    },
+  },
 };
 
 export async function list({ empresaId, skip, take, produtoId, dataValidadeAte }) {

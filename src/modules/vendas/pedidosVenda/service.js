@@ -24,6 +24,7 @@ const SELECT_HEADER = {
   turno: true,
   dataEmissao: true,
   status: true,
+  arquivado: true,
   criadoEm: true,
   atualizadoEm: true,
   cliente: { select: { participante: { select: { razaoSocial: true, cpfCnpj: true } } } },
@@ -101,10 +102,40 @@ async function getPedidoOrThrow({ empresaId, id, select = SELECT_DETAIL }) {
   return pedido;
 }
 
-export async function list({ empresaId, skip, take, status, separadorId, dataInicial, dataFinal }) {
+// Filtro de "lançamento" pedido pelo usuário — 5 baldes que não mapeiam 1:1
+// pro enum StatusPedidoVenda: LIQUIDADO e AGRUPADO são derivados de
+// relações (títulos baixados / entrou num agrupamento de NF), ARQUIVADO é a
+// flag nova, e todos excluem arquivado=true (arquivar esconde da lista
+// independente do status por baixo — ver comentário do campo no schema).
+// EM_ABERTO/CANCELADO continuam batendo direto no enum. Quem não passar
+// nenhum filtro continua vendo tudo (comportamento anterior preservado).
+function whereDoFiltro(filtro) {
+  switch (filtro) {
+    case "EM_ABERTO":
+      return { status: "ABERTO", arquivado: false };
+    case "CANCELADO":
+      return { status: "CANCELADO", arquivado: false };
+    case "LIQUIDADO":
+      return {
+        status: "FATURADO",
+        arquivado: false,
+        titulosFinanceiros: { some: {} },
+        NOT: { titulosFinanceiros: { some: { status: { not: "BAIXADO" } } } },
+      };
+    case "AGRUPADO":
+      return { arquivado: false, pedidosVendaAgrupados: { some: {} } };
+    case "ARQUIVADO":
+      return { arquivado: true };
+    default:
+      return {};
+  }
+}
+
+export async function list({ empresaId, skip, take, status, filtro, separadorId, dataInicial, dataFinal }) {
   const where = {
     empresaId,
     ...(status ? { status } : {}),
+    ...whereDoFiltro(filtro),
     ...(separadorId ? { separadorId } : {}),
     ...(dataInicial || dataFinal
       ? { dataEmissao: { ...(dataInicial ? { gte: dataInicial } : {}), ...(dataFinal ? { lte: dataFinal } : {}) } }
@@ -525,4 +556,12 @@ export async function atribuirItinerario({ empresaId, id, rotaEntregaId, turno }
     data: { ...(rotaEntregaId ? { rotaEntregaId } : {}), ...(turno ? { turno } : {}) },
     select: SELECT_DETAIL,
   });
+}
+
+// Arquivar é só visibilidade (ver comentário do campo no schema) — funciona
+// em qualquer status, inclusive ABERTO, diferente das transições de
+// updateStatus que têm regras de fluxo.
+export async function arquivar({ empresaId, id, arquivado }) {
+  await getPedidoOrThrow({ empresaId, id, select: { id: true } });
+  return prisma.pedidoVenda.update({ where: { id }, data: { arquivado }, select: SELECT_DETAIL });
 }

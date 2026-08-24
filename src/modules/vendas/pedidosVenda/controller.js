@@ -9,6 +9,7 @@ export const list = asyncHandler(async (req, res) => {
     skip,
     take,
     status: req.query.status,
+    filtro: req.query.filtro,
     separadorId: req.query.separadorId,
     dataInicial: req.query.dataInicial,
     dataFinal: req.query.dataFinal,
@@ -105,6 +106,15 @@ export const atribuirItinerario = asyncHandler(async (req, res) => {
     id: req.params.id,
     rotaEntregaId: req.body.rotaEntregaId,
     turno: req.body.turno,
+  });
+  res.json(pedido);
+});
+
+export const arquivar = asyncHandler(async (req, res) => {
+  const pedido = await service.arquivar({
+    empresaId: req.user.empresaId,
+    id: req.params.id,
+    arquivado: req.body.arquivado,
   });
   res.json(pedido);
 });

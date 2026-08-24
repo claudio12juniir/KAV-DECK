@@ -38,7 +38,7 @@ export function initRealtime(httpServer) {
     }
 
     const usuario = await loadUsuarioFromPayload(payload);
-    if (!usuario) return next(new Error("UNAUTHORIZED"));
+    if (!usuario || !usuario.ativo) return next(new Error("UNAUTHORIZED"));
 
     socket.data.usuario = usuario;
     socket.data.sessionId = sessionId;

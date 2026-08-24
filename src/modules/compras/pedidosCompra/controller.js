@@ -9,6 +9,7 @@ export const list = asyncHandler(async (req, res) => {
     skip,
     take,
     status: req.query.status,
+    filtro: req.query.filtro,
   });
   res.json(buildPaginatedResult({ items, total, page, pageSize }));
 });
@@ -109,6 +110,15 @@ export const aplicarFrete = asyncHandler(async (req, res) => {
     id: req.params.id,
     transportadoraId: req.body.transportadoraId,
     valorFrete: req.body.valorFrete,
+  });
+  res.json(pedido);
+});
+
+export const arquivar = asyncHandler(async (req, res) => {
+  const pedido = await service.arquivar({
+    empresaId: req.user.empresaId,
+    id: req.params.id,
+    arquivado: req.body.arquivado,
   });
   res.json(pedido);
 });

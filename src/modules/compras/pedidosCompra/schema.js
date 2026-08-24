@@ -57,3 +57,7 @@ export const aplicarFreteSchema = z.object({
   transportadoraId: z.string().uuid().optional(),
   valorFrete: decimalString(),
 });
+
+export const arquivarSchema = z.object({
+  arquivado: z.boolean(),
+});
