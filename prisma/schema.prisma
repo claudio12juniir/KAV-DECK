@@ -235,6 +235,16 @@ enum TipoPontoAcesso {
   EXTRA // comprável/cancelável por um ADMIN
 }
 
+// CARTAO usa o preapproval nativo do Mercado Pago (cobrança automática).
+// PIX e BOLETO não têm cobrança recorrente nativa no MP — cada ciclo gera um
+// pagamento avulso novo (ver gerarFaturasRecorrentes em jobs/assinaturasCron.js)
+// que o cliente precisa pagar manualmente antes do vencimento.
+enum FormaPagamento {
+  CARTAO
+  PIX
+  BOLETO
+}
+
 // Uma assinatura recorrente consolidada por empresa (não uma por ponto) — o
 // valor cobrado no Mercado Pago é sempre a soma de todos os PontoAcesso
 // vigentes; comprar/cancelar um ponto só reflete na PRÓXIMA cobrança, nunca
@@ -245,11 +255,26 @@ model AssinaturaEmpresa {
   mpPreapprovalId     String?                 @map("mp_preapproval_id")
   mpPayerId           String?                 @map("mp_payer_id")
   status              StatusAssinaturaEmpresa @default(AGUARDANDO_PAGAMENTO)
+  formaPagamento      FormaPagamento          @default(CARTAO) @map("forma_pagamento")
   proximaCobranca     DateTime?               @map("proxima_cobranca") @db.Date
   dataVencimentoAtual DateTime?               @map("data_vencimento_atual") @db.Date
   ultimoPagamentoEm   DateTime?               @map("ultimo_pagamento_em")
   criadoEm            DateTime                @default(now()) @map("criado_em")
   atualizadoEm        DateTime                @updatedAt @map("atualizado_em")
+
+  // Fatura do ciclo vigente quando formaPagamento é PIX ou BOLETO — nulos
+  // quando é CARTAO (cobrança automática, sem fatura pra mostrar) ou quando
+  // ainda não foi gerada a fatura do ciclo.
+  faturaMpPaymentId     String?   @map("fatura_mp_payment_id")
+  faturaVencimento      DateTime? @map("fatura_vencimento") @db.Date
+  faturaPixCopiaCola    String?   @map("fatura_pix_copia_cola") @db.Text
+  faturaPixQrCodeBase64 String?   @map("fatura_pix_qr_code_base64") @db.Text
+  faturaBoletoUrl       String?   @map("fatura_boleto_url")
+  faturaBoletoLinha     String?   @map("fatura_boleto_linha")
+  cpfResponsavel        String?   @map("cpf_responsavel") // exigido pelo MP para emitir boleto
+  enderecoResponsavel   Json?     @map("endereco_responsavel") // { cep, logradouro, numero, bairro, cidade, uf } — também exigido pra boleto
+
+  avisoAtrasoEnviadoEm DateTime? @map("aviso_atraso_enviado_em")
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 

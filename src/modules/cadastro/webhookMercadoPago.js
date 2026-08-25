@@ -60,6 +60,16 @@ async function tratarPagamento(dataId) {
         ultimoPagamentoEm: new Date(),
         proximaCobranca: addMonths(new Date(), 1),
         dataVencimentoAtual: null,
+        avisoAtrasoEnviadoEm: null,
+        // Limpa a fatura do ciclo (só relevante pra pix/boleto — cartão já
+        // não usa esses campos) pra o QR code/linha digitável sumirem da
+        // tela assim que o cliente pagar.
+        faturaMpPaymentId: null,
+        faturaVencimento: null,
+        faturaPixCopiaCola: null,
+        faturaPixQrCodeBase64: null,
+        faturaBoletoUrl: null,
+        faturaBoletoLinha: null,
       },
     });
   } else if (["rejected", "cancelled"].includes(pagamento.status)) {

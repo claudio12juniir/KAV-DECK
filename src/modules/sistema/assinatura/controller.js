@@ -23,3 +23,15 @@ export const trocarCartao = asyncHandler(async (req, res) => {
   });
   res.json(resultado);
 });
+
+export const trocarFormaPagamento = asyncHandler(async (req, res) => {
+  const backUrl = `${req.protocol}://${req.get("host")}/`;
+  const resultado = await service.trocarFormaPagamento({
+    empresaId: req.user.empresaId,
+    formaPagamento: req.body.formaPagamento,
+    cpf: req.body.cpf,
+    endereco: req.body.endereco,
+    backUrl,
+  });
+  res.json(resultado);
+});

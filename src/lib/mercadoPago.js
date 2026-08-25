@@ -79,8 +79,57 @@ export async function buscarPreapproval(preapprovalId) {
   return request("GET", `/preapproval/${preapprovalId}`);
 }
 
+// Usado ao trocar de CARTAO pra PIX/BOLETO — sem isso a cobrança automática
+// do cartão continuaria rodando em paralelo com a fatura avulsa gerada pra
+// nova forma de pagamento.
+export async function cancelarPreapproval(preapprovalId) {
+  return request("PUT", `/preapproval/${preapprovalId}`, { status: "cancelled" });
+}
+
 export async function buscarPagamento(paymentId) {
   return request("GET", `/v1/payments/${paymentId}`);
+}
+
+// PIX e boleto não têm produto de assinatura recorrente no Mercado Pago —
+// cada ciclo gera um pagamento avulso novo (ver gerarFaturasRecorrentes em
+// jobs/assinaturasCron.js) que o cliente paga manualmente antes do
+// vencimento. O webhook de "payment" (já usado pelo cartão) trata a
+// confirmação da mesma forma, então nenhuma mudança foi necessária lá.
+export async function criarPagamentoPix({ valor, payerEmail, externalReference, descricao }) {
+  return request("POST", "/v1/payments", {
+    transaction_amount: Number(valor),
+    description: descricao,
+    payment_method_id: "pix",
+    external_reference: externalReference,
+    payer: { email: payerEmail },
+  });
+}
+
+// Boleto exige CPF e endereço completo do pagador — sem isso o MP recusa a
+// emissão (testado contra a API real em 2026-08-25: "To generate a
+// registered boleto the following parameters are required: ...").
+export async function criarPagamentoBoleto({ valor, payerEmail, cpf, nome, endereco, externalReference, descricao }) {
+  const [firstName, ...rest] = (nome || "Assinante").split(" ");
+  return request("POST", "/v1/payments", {
+    transaction_amount: Number(valor),
+    description: descricao,
+    payment_method_id: "bolbradesco",
+    external_reference: externalReference,
+    payer: {
+      email: payerEmail,
+      first_name: firstName,
+      last_name: rest.join(" ") || firstName,
+      identification: { type: "CPF", number: cpf },
+      address: {
+        zip_code: endereco.cep,
+        street_name: endereco.logradouro,
+        street_number: endereco.numero,
+        neighborhood: endereco.bairro,
+        city: endereco.cidade,
+        federal_unit: endereco.uf,
+      },
+    },
+  });
 }
 
 // Algoritmo oficial do Mercado Pago pra validar a origem do webhook:

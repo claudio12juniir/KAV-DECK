@@ -3,7 +3,7 @@ import { auth } from "../../../middlewares/auth.js";
 import { requireRole } from "../../../middlewares/rbac.js";
 import { validate } from "../../../middlewares/validate.js";
 import * as controller from "./controller.js";
-import { comprarAcessoSchema, pontoIdParamSchema, trocarCartaoSchema } from "./schema.js";
+import { comprarAcessoSchema, pontoIdParamSchema, trocarCartaoSchema, trocarFormaPagamentoSchema } from "./schema.js";
 
 export const router = Router();
 
@@ -18,3 +18,9 @@ router.delete(
   controller.cancelarPonto,
 );
 router.post("/cartao", requireRole("ADMIN"), validate({ body: trocarCartaoSchema }), controller.trocarCartao);
+router.post(
+  "/forma-pagamento",
+  requireRole("ADMIN"),
+  validate({ body: trocarFormaPagamentoSchema }),
+  controller.trocarFormaPagamento,
+);

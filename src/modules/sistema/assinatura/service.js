@@ -1,11 +1,24 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../../lib/prisma.js";
-import { atualizarCartaoPreapproval, atualizarValorPreapproval } from "../../../lib/mercadoPago.js";
+import {
+  atualizarCartaoPreapproval,
+  atualizarValorPreapproval,
+  cancelarPreapproval,
+  criarPagamentoBoleto,
+  criarPagamentoPix,
+  criarPreapproval,
+} from "../../../lib/mercadoPago.js";
 import { AppError } from "../../../utils/AppError.js";
 
 export const VALOR_PONTO_EXTRA = new Prisma.Decimal("150.00");
 
 const PONTOS_UTILIZAVEIS = { in: ["ATIVO", "CANCELAMENTO_AGENDADO"] };
+
+function addDias(data, dias) {
+  const resultado = new Date(data);
+  resultado.setDate(resultado.getDate() + dias);
+  return resultado;
+}
 
 async function getAssinaturaOrThrow(empresaId) {
   const assinatura = await prisma.assinaturaEmpresa.findUnique({ where: { empresaId } });
@@ -13,10 +26,17 @@ async function getAssinaturaOrThrow(empresaId) {
   return assinatura;
 }
 
+async function getAdminOrThrow(empresaId) {
+  const admin = await prisma.usuario.findFirst({ where: { empresaId, role: "ADMIN" }, orderBy: { criadoEm: "asc" } });
+  if (!admin) throw new AppError(404, "NOT_FOUND", "Nenhum administrador encontrado para esta empresa.");
+  return admin;
+}
+
 // Soma só os pontos ATIVO (não os em CANCELAMENTO_AGENDADO) porque é
-// exatamente esse o valor que o Mercado Pago vai cobrar na PRÓXIMA
-// cobrança — um ponto cancelado já teve seu valor removido da assinatura no
-// momento do cancelamento, mesmo continuando utilizável até o fim do ciclo.
+// exatamente esse o valor que a PRÓXIMA cobrança (cartão automático, ou
+// próxima fatura de pix/boleto) vai usar — um ponto cancelado já teve seu
+// valor removido no momento do cancelamento, mesmo continuando utilizável
+// até o fim do ciclo.
 async function valorAtivoAtual(empresaId) {
   const resultado = await prisma.pontoAcesso.aggregate({
     where: { empresaId, status: "ATIVO" },
@@ -111,12 +131,25 @@ export async function obterDashboard({ empresaId }) {
   return {
     semAssinatura: false,
     status: assinatura.status,
+    formaPagamento: assinatura.formaPagamento,
     proximaCobranca: assinatura.proximaCobranca,
     diasEmAtraso: diasEmAtraso(assinatura.dataVencimentoAtual),
     pontosContratados: pontos.length,
     conectadosAgora,
     valorProximaCobranca,
     pontos,
+    cpfResponsavel: assinatura.cpfResponsavel,
+    enderecoResponsavel: assinatura.enderecoResponsavel,
+    fatura:
+      assinatura.formaPagamento === "CARTAO" || !assinatura.faturaMpPaymentId
+        ? null
+        : {
+            vencimento: assinatura.faturaVencimento,
+            pixCopiaCola: assinatura.faturaPixCopiaCola,
+            pixQrCodeBase64: assinatura.faturaPixQrCodeBase64,
+            boletoUrl: assinatura.faturaBoletoUrl,
+            boletoLinha: assinatura.faturaBoletoLinha,
+          },
   };
 }
 
@@ -136,7 +169,9 @@ export async function comprarAcesso({ empresaId, nome, email, senha, role }) {
 
   const totalAnterior = await valorAtivoAtual(empresaId);
   const novoTotal = totalAnterior.plus(VALOR_PONTO_EXTRA);
-  if (assinatura.mpPreapprovalId) {
+  // Pix/boleto não têm cobrança automática pra atualizar — o valor novo só
+  // entra na PRÓXIMA fatura gerada (valorAtivoAtual já reflete isso).
+  if (assinatura.formaPagamento === "CARTAO" && assinatura.mpPreapprovalId) {
     await atualizarValorPreapproval(assinatura.mpPreapprovalId, novoTotal);
   }
 
@@ -159,7 +194,7 @@ export async function comprarAcesso({ empresaId, nome, email, senha, role }) {
     });
   } catch (erro) {
     if (usuarioAuth?.id) await excluirUsuarioAuth(usuarioAuth.id);
-    if (assinatura.mpPreapprovalId) {
+    if (assinatura.formaPagamento === "CARTAO" && assinatura.mpPreapprovalId) {
       await atualizarValorPreapproval(assinatura.mpPreapprovalId, totalAnterior).catch(() => null);
     }
     throw erro;
@@ -181,7 +216,7 @@ export async function cancelarPonto({ empresaId, pontoId }) {
   }
 
   const novoTotal = (await valorAtivoAtual(empresaId)).minus(ponto.valorMensal);
-  if (assinatura.mpPreapprovalId) {
+  if (assinatura.formaPagamento === "CARTAO" && assinatura.mpPreapprovalId) {
     await atualizarValorPreapproval(assinatura.mpPreapprovalId, novoTotal);
   }
 
@@ -210,4 +245,100 @@ export async function trocarCartao({ empresaId, cardTokenId }) {
 
   await atualizarCartaoPreapproval(assinatura.mpPreapprovalId, cardTokenId);
   return { atualizado: true };
+}
+
+// Gera (ou regenera) a fatura avulsa do ciclo vigente pra PIX/BOLETO — nunca
+// chamada quando formaPagamento é CARTAO (cobrança automática do MP, sem
+// fatura pra mostrar). Usada tanto ao trocar de forma de pagamento quanto
+// pelo cron mensal (ver jobs/assinaturasCron.js:gerarFaturasRecorrentes).
+export async function gerarFaturaCicloAtual({ empresaId }) {
+  const assinatura = await getAssinaturaOrThrow(empresaId);
+  if (assinatura.formaPagamento === "CARTAO") return obterDashboard({ empresaId });
+
+  const admin = await getAdminOrThrow(empresaId);
+  const valor = await valorAtivoAtual(empresaId);
+  const descricao = "Assinatura KAV DECK";
+  const externalReference = assinatura.id;
+
+  const pagamento =
+    assinatura.formaPagamento === "PIX"
+      ? await criarPagamentoPix({ valor, payerEmail: admin.email, externalReference, descricao })
+      : await criarPagamentoBoleto({
+          valor,
+          payerEmail: admin.email,
+          cpf: assinatura.cpfResponsavel,
+          nome: admin.nome,
+          endereco: assinatura.enderecoResponsavel,
+          externalReference,
+          descricao,
+        });
+
+  await prisma.assinaturaEmpresa.update({
+    where: { empresaId },
+    data: {
+      faturaMpPaymentId: String(pagamento.id),
+      // 3 dias de prazo pra pagar — depois disso o job de suspensão segue a
+      // mesma régua de carência usada pelo cartão (10 dias em INADIMPLENTE
+      // contados a partir de dataVencimentoAtual, ver assinaturasCron.js).
+      faturaVencimento: addDias(new Date(), 3),
+      faturaPixCopiaCola: pagamento.point_of_interaction?.transaction_data?.qr_code ?? null,
+      faturaPixQrCodeBase64: pagamento.point_of_interaction?.transaction_data?.qr_code_base64 ?? null,
+      faturaBoletoUrl: pagamento.transaction_details?.external_resource_url ?? null,
+      faturaBoletoLinha: pagamento.barcode?.content ?? null,
+    },
+  });
+
+  return obterDashboard({ empresaId });
+}
+
+// Troca a forma de pagamento da assinatura. CARTAO devolve um initPoint pra
+// o frontend redirecionar pro checkout hospedado do MP (precisa confirmar um
+// cartão novo — nunca herdamos um cartão de uma fatura pix/boleto). PIX e
+// BOLETO geram a primeira fatura do novo ciclo na hora, pra a tela já
+// mostrar o QR code / linha digitável sem um segundo clique.
+export async function trocarFormaPagamento({ empresaId, formaPagamento, cpf, endereco, backUrl }) {
+  const assinatura = await getAssinaturaOrThrow(empresaId);
+  if (assinatura.status !== "ATIVA" && assinatura.status !== "INADIMPLENTE") {
+    throw new AppError(409, "ASSINATURA_NAO_ATIVA", "Só é possível trocar a forma de pagamento com a assinatura em dia ou em atraso.");
+  }
+  if (formaPagamento === "BOLETO" && (!cpf || !endereco)) {
+    throw new AppError(400, "DADOS_INCOMPLETOS", "Boleto exige CPF e endereço completo do responsável pela empresa.");
+  }
+
+  // Sai do cartão: cancela a cobrança automática do MP antes de trocar,
+  // senão o cartão continuaria sendo cobrado em paralelo com a fatura nova.
+  if (assinatura.formaPagamento === "CARTAO" && formaPagamento !== "CARTAO" && assinatura.mpPreapprovalId) {
+    await cancelarPreapproval(assinatura.mpPreapprovalId).catch(() => null);
+  }
+
+  if (formaPagamento === "CARTAO") {
+    const admin = await getAdminOrThrow(empresaId);
+    const valor = await valorAtivoAtual(empresaId);
+    const preapproval = await criarPreapproval({ payerEmail: admin.email, valorMensal: valor, referenciaExterna: assinatura.id, backUrl });
+    await prisma.assinaturaEmpresa.update({
+      where: { empresaId },
+      data: {
+        formaPagamento,
+        mpPreapprovalId: String(preapproval.id),
+        faturaMpPaymentId: null,
+        faturaVencimento: null,
+        faturaPixCopiaCola: null,
+        faturaPixQrCodeBase64: null,
+        faturaBoletoUrl: null,
+        faturaBoletoLinha: null,
+      },
+    });
+    return { initPoint: preapproval.init_point };
+  }
+
+  await prisma.assinaturaEmpresa.update({
+    where: { empresaId },
+    data: {
+      formaPagamento,
+      cpfResponsavel: cpf ?? assinatura.cpfResponsavel,
+      enderecoResponsavel: endereco ?? assinatura.enderecoResponsavel,
+    },
+  });
+
+  return gerarFaturaCicloAtual({ empresaId });
 }

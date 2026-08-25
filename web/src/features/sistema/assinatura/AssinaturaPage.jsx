@@ -34,6 +34,10 @@ const PONTO_STATUS_LABEL = {
   ENCERRADO: "Encerrado",
 };
 
+const FORMA_PAGAMENTO_LABEL = { CARTAO: "Cartão de crédito", PIX: "Pix", BOLETO: "Boleto" };
+
+const ENDERECO_VAZIO = { cep: "", logradouro: "", numero: "", bairro: "", cidade: "", uf: "" };
+
 function formatarMoeda(valor) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(valor));
 }
@@ -51,6 +55,12 @@ export function AssinaturaPage() {
   const [modalAberto, setModalAberto] = useState(false);
   const [novoAcesso, setNovoAcesso] = useState({ nome: "", email: "", senha: "", role: "FUNCIONARIO" });
   const [cancelandoId, setCancelandoId] = useState(null);
+
+  const [modalFormaAberto, setModalFormaAberto] = useState(false);
+  const [trocandoForma, setTrocandoForma] = useState(false);
+  const [novaForma, setNovaForma] = useState("CARTAO");
+  const [cpf, setCpf] = useState("");
+  const [endereco, setEndereco] = useState(ENDERECO_VAZIO);
 
   const temAcesso = PAPEIS_COM_ACESSO.includes(me?.role);
   const podeGerenciar = me?.role === "ADMIN";
@@ -100,6 +110,44 @@ export function AssinaturaPage() {
     } finally {
       setCancelandoId(null);
     }
+  }
+
+  function abrirModalForma() {
+    setNovaForma(dados?.formaPagamento ?? "CARTAO");
+    setCpf(dados?.cpfResponsavel ?? "");
+    setEndereco(dados?.enderecoResponsavel ?? ENDERECO_VAZIO);
+    setModalFormaAberto(true);
+  }
+
+  async function trocarForma(event) {
+    event.preventDefault();
+    setTrocandoForma(true);
+    try {
+      const payload = { formaPagamento: novaForma };
+      if (novaForma === "BOLETO") {
+        payload.cpf = cpf.replace(/\D/g, "");
+        payload.endereco = endereco;
+      }
+      const resultado = await assinaturaApi.trocarFormaPagamento(payload);
+      if (resultado.initPoint) {
+        window.location.href = resultado.initPoint;
+        return;
+      }
+      setDados(resultado);
+      setModalFormaAberto(false);
+      toast.success(
+        novaForma === "CARTAO" ? "Forma de pagamento atualizada." : "Fatura gerada — confira o Pix ou boleto abaixo.",
+      );
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível trocar a forma de pagamento.");
+    } finally {
+      setTrocandoForma(false);
+    }
+  }
+
+  function copiar(texto, mensagem) {
+    navigator.clipboard?.writeText(texto);
+    toast.success(mensagem);
   }
 
   if (!temAcesso) {
@@ -209,6 +257,60 @@ export function AssinaturaPage() {
         </Card>
       </div>
 
+      <Card style={{ marginBottom: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Forma de pagamento</h3>
+            <p style={{ margin: "4px 0 0", color: "var(--color-text-muted)" }}>
+              {FORMA_PAGAMENTO_LABEL[dados.formaPagamento] ?? dados.formaPagamento}
+            </p>
+          </div>
+          {podeGerenciar && <Button variant="secondary" onClick={abrirModalForma}>Trocar forma de pagamento</Button>}
+        </div>
+
+        {dados.fatura && (
+          <div style={{ marginTop: "20px", borderTop: "1px solid var(--color-border)", paddingTop: "20px" }}>
+            <p style={{ margin: "0 0 12px", fontWeight: 600 }}>
+              Fatura do ciclo atual — vence em {formatarData(dados.fatura.vencimento)}
+            </p>
+            {dados.formaPagamento === "PIX" && dados.fatura.pixQrCodeBase64 && (
+              <div style={{ display: "flex", gap: "20px", alignItems: "flex-start", flexWrap: "wrap" }}>
+                <img
+                  src={`data:image/png;base64,${dados.fatura.pixQrCodeBase64}`}
+                  alt="QR code do Pix"
+                  style={{ width: 180, height: 180, borderRadius: "8px", border: "1px solid var(--color-border)" }}
+                />
+                <div style={{ flex: 1, minWidth: "240px" }}>
+                  <p style={{ margin: "0 0 8px", color: "var(--color-text-muted)" }}>Pix copia e cola</p>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <Input readOnly value={dados.fatura.pixCopiaCola ?? ""} style={{ flex: 1 }} />
+                    <Button
+                      variant="secondary"
+                      onClick={() => copiar(dados.fatura.pixCopiaCola, "Código Pix copiado.")}
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {dados.formaPagamento === "BOLETO" && dados.fatura.boletoUrl && (
+              <div>
+                <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+                  <Input readOnly value={dados.fatura.boletoLinha ?? ""} style={{ flex: 1 }} />
+                  <Button variant="secondary" onClick={() => copiar(dados.fatura.boletoLinha, "Linha digitável copiada.")}>
+                    Copiar
+                  </Button>
+                </div>
+                <Button onClick={() => window.open(dados.fatura.boletoUrl, "_blank", "noreferrer")}>
+                  Abrir boleto
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
           <h3 style={{ margin: 0 }}>Acessos internos</h3>
@@ -243,6 +345,91 @@ export function AssinaturaPage() {
             <option value="FUNCIONARIO">Funcionário</option>
             <option value="ADMIN">Administrador</option>
           </Select>
+        </form>
+      </Modal>
+
+      <Modal
+        open={modalFormaAberto}
+        onClose={() => !trocandoForma && setModalFormaAberto(false)}
+        title="Trocar forma de pagamento"
+        footer={(
+          <>
+            <Button variant="secondary" disabled={trocandoForma} onClick={() => setModalFormaAberto(false)}>Cancelar</Button>
+            <Button type="submit" form="form-forma-pagamento" loading={trocandoForma}>Confirmar</Button>
+          </>
+        )}
+      >
+        <form id="form-forma-pagamento" onSubmit={trocarForma} style={{ display: "grid", gap: "14px" }}>
+          <Select label="Forma de pagamento" value={novaForma} onChange={(e) => setNovaForma(e.target.value)}>
+            <option value="CARTAO">Cartão de crédito</option>
+            <option value="PIX">Pix</option>
+            <option value="BOLETO">Boleto</option>
+          </Select>
+          {novaForma === "CARTAO" && (
+            <p style={{ margin: 0, color: "var(--color-text-muted)" }}>
+              Você vai ser redirecionado pro checkout seguro do Mercado Pago pra confirmar o cartão.
+            </p>
+          )}
+          {novaForma === "PIX" && (
+            <p style={{ margin: 0, color: "var(--color-text-muted)" }}>
+              Uma fatura Pix é gerada agora pro ciclo vigente — as próximas são geradas automaticamente a cada mês.
+            </p>
+          )}
+          {novaForma === "BOLETO" && (
+            <>
+              <p style={{ margin: 0, color: "var(--color-text-muted)" }}>
+                Boleto exige CPF e endereço do responsável pela empresa (exigência do Mercado Pago).
+              </p>
+              <Input
+                label="CPF"
+                required
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+                placeholder="Somente números"
+              />
+              <Input
+                label="CEP"
+                required
+                value={endereco.cep}
+                onChange={(e) => setEndereco((v) => ({ ...v, cep: e.target.value }))}
+              />
+              <Input
+                label="Logradouro"
+                required
+                value={endereco.logradouro}
+                onChange={(e) => setEndereco((v) => ({ ...v, logradouro: e.target.value }))}
+              />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <Input
+                  label="Número"
+                  required
+                  value={endereco.numero}
+                  onChange={(e) => setEndereco((v) => ({ ...v, numero: e.target.value }))}
+                />
+                <Input
+                  label="Bairro"
+                  required
+                  value={endereco.bairro}
+                  onChange={(e) => setEndereco((v) => ({ ...v, bairro: e.target.value }))}
+                />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: "14px" }}>
+                <Input
+                  label="Cidade"
+                  required
+                  value={endereco.cidade}
+                  onChange={(e) => setEndereco((v) => ({ ...v, cidade: e.target.value }))}
+                />
+                <Input
+                  label="UF"
+                  required
+                  maxLength={2}
+                  value={endereco.uf}
+                  onChange={(e) => setEndereco((v) => ({ ...v, uf: e.target.value.toUpperCase() }))}
+                />
+              </div>
+            </>
+          )}
         </form>
       </Modal>
     </div>
