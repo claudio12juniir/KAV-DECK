@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
+import { useAuth } from "../../contexts/AuthContext.jsx";
 import { apiClient } from "../../lib/apiClient.js";
 import { supabase } from "../../lib/supabaseClient.js";
 import { AuthBackButton } from "../auth/AuthBackButton.jsx";
@@ -33,6 +34,7 @@ function limparRascunho() {
 
 export function CriarContaPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [etapa, setEtapa] = useState(1);
   const [carregando, setCarregando] = useState(false);
   const [retomandoCadastro, setRetomandoCadastro] = useState(true);
@@ -45,8 +47,7 @@ export function CriarContaPage() {
   }
 
   async function voltarParaEntrada() {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) await supabase.auth.signOut();
+    if (session) await supabase.auth.signOut();
     navigate("/entrada", { replace: true });
   }
 
@@ -57,9 +58,11 @@ export function CriarContaPage() {
   useEffect(() => {
     let ativo = true;
     async function retomarSeNecessario() {
-      const { data } = await supabase.auth.getSession();
-      if (!ativo) return;
-      if (!data.session) {
+      // A sessão já foi carregada pelo AuthContext antes desta página ser
+      // montada. Consultar auth.getSession() novamente aqui pode disputar o
+      // lock interno do Supabase e deixar `retomandoCadastro` preso em true,
+      // mantendo o React sem conteúdo e produzindo uma tela toda branca.
+      if (!session) {
         setRetomandoCadastro(false);
         return;
       }
@@ -109,7 +112,7 @@ export function CriarContaPage() {
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [session]);
 
   // Cria o usuário direto no Supabase Auth (igual ao login normal — o
   // backend nunca vê a senha) e, em seguida, cria a Empresa/Usuario/ponto
