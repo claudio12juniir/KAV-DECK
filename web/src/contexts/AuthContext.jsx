@@ -76,8 +76,18 @@ export function AuthProvider({ children }) {
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, novaSessao) => {
       setSession(novaSessao);
-      if (novaSessao) carregarMe();
-      else setMe(null);
+      if (novaSessao) {
+        // O Supabase mantém um lock interno enquanto notifica os listeners.
+        // `carregarMe` usa apiClient, que chama auth.getSession(); executá-lo
+        // diretamente neste callback pode criar um deadlock no primeiro
+        // signUp e impedir que /cadastro/empresa avance para o pagamento.
+        // Adia a chamada até o evento de autenticação terminar por completo.
+        setTimeout(() => {
+          if (ativo) carregarMe();
+        }, 0);
+      } else {
+        setMe(null);
+      }
     });
 
     function handleSessaoRevogada(event) {
