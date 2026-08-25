@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { useAuth } from "../../contexts/AuthContext.jsx";
+import { AuthBackButton } from "./AuthBackButton.jsx";
 import "./LoginPage.css";
 
 export function LoginPage() {
@@ -31,6 +32,7 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <Card className="login-card">
+        <AuthBackButton onClick={() => navigate("/entrada")} label="Voltar para a entrada" />
         <div className="login-brand">KAV DECK</div>
         <p className="login-sub">Entre com sua conta para continuar.</p>
 

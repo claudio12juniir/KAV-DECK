@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { apiClient } from "../../lib/apiClient.js";
 import { supabase } from "../../lib/supabaseClient.js";
+import { AuthBackButton } from "../auth/AuthBackButton.jsx";
 import "../auth/LoginPage.css";
 
 // Guarda os dados da empresa (nunca a senha) entre o clique em "Continuar" e
@@ -30,6 +32,7 @@ function limparRascunho() {
 }
 
 export function CriarContaPage() {
+  const navigate = useNavigate();
   const [etapa, setEtapa] = useState(1);
   const [carregando, setCarregando] = useState(false);
   const [retomandoCadastro, setRetomandoCadastro] = useState(true);
@@ -39,6 +42,12 @@ export function CriarContaPage() {
 
   function atualizarEmpresa(campo, valor) {
     setEmpresa((atual) => ({ ...atual, [campo]: valor }));
+  }
+
+  async function voltarParaEntrada() {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) await supabase.auth.signOut();
+    navigate("/entrada", { replace: true });
   }
 
   // Cobre a volta do link de confirmação de e-mail: se já existe uma sessão
@@ -156,6 +165,7 @@ export function CriarContaPage() {
   return (
     <div className="login-page">
       <Card className="login-card">
+        <AuthBackButton onClick={voltarParaEntrada} label="Voltar para a entrada" />
         <div className="login-brand">KAV DECK</div>
         <p className="login-sub">
           {etapa === 1

@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { supabase } from "../../lib/supabaseClient.js";
+import { AuthBackButton } from "./AuthBackButton.jsx";
 import "./LoginPage.css";
 
 // Alcançada só pelo link de e-mail de recuperação de senha (Supabase Auth
@@ -16,6 +17,11 @@ export function RedefinirSenhaPage() {
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+
+  async function voltarParaLogin() {
+    await supabase.auth.signOut();
+    navigate("/login", { replace: true });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -43,6 +49,7 @@ export function RedefinirSenhaPage() {
   return (
     <div className="login-page">
       <Card className="login-card">
+        <AuthBackButton onClick={voltarParaLogin} label="Voltar para o login" />
         <div className="login-brand">KAV DECK</div>
         <p className="login-sub">Escolha uma nova senha para sua conta.</p>
 
