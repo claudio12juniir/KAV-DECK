@@ -11,12 +11,24 @@ function addMonths(data, meses) {
   return resultado;
 }
 
+const REGEX_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// external_reference vem de fora (é o que a gente manda pro MP na criação,
+// mas qualquer teste/curl feito direto contra a API do MP com um valor
+// arbitrário — como os diagnósticos manuais rodados nesta sessão — também
+// gera notificações reais com esse mesmo campo). Sem essa checagem, um
+// valor que não é UUID quebra o findUnique com um erro do Prisma em vez de
+// simplesmente ser ignorado como "não é uma assinatura nossa".
+function ehUuid(valor) {
+  return typeof valor === "string" && REGEX_UUID.test(valor);
+}
+
 // A ativação inicial vem sempre por aqui: o cliente confirma o cartão no
 // checkout hospedado do MP (init_point, ver modules/cadastro/service.js) e o
 // MP notifica esse tipo de evento quando o preapproval muda de status.
 async function tratarPreapproval(dataId) {
   const preapproval = await buscarPreapproval(dataId);
-  if (!preapproval.external_reference) return;
+  if (!ehUuid(preapproval.external_reference)) return;
 
   const assinatura = await prisma.assinaturaEmpresa.findUnique({ where: { id: preapproval.external_reference } });
   if (!assinatura) return;
@@ -47,7 +59,7 @@ async function tratarPreapproval(dataId) {
 // pagamento avulso vinculado ao preapproval (external_reference herdado).
 async function tratarPagamento(dataId) {
   const pagamento = await buscarPagamento(dataId);
-  if (!pagamento.external_reference) return;
+  if (!ehUuid(pagamento.external_reference)) return;
 
   const assinatura = await prisma.assinaturaEmpresa.findUnique({ where: { id: pagamento.external_reference } });
   if (!assinatura) return;
