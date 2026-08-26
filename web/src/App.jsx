@@ -7,6 +7,7 @@ import { RealtimeProvider } from "./contexts/RealtimeContext.jsx";
 import { supabase } from "./lib/supabaseClient.js";
 import { EntradaPage } from "./features/auth/EntradaPage.jsx";
 import { LoginPage } from "./features/auth/LoginPage.jsx";
+import { PrivacidadePage } from "./features/auth/PrivacidadePage.jsx";
 import { RedefinirSenhaPage } from "./features/auth/RedefinirSenhaPage.jsx";
 import { CriarContaPage } from "./features/cadastro/CriarContaPage.jsx";
 
@@ -50,6 +51,7 @@ function PreAuthRoutes() {
           nenhum além desta tela. */}
       <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
       <Route path="/criar-conta" element={me ? <Navigate to="/" replace /> : <CriarContaPage />} />
+      <Route path="/privacidade" element={<PrivacidadePage />} />
       {/* Qualquer outra URL enquanto não autenticado — AppGate só entra aqui
           quando falta login, falta terminar o cadastro, ou a assinatura
           está pendente (ver `precisaFinalizarCadastro` em AuthContext.jsx). */}

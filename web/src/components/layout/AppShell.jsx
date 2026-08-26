@@ -79,33 +79,20 @@ const NAV_GROUPS = [
 
 const PAPEIS_COM_ACESSO_SISTEMA = ["ADMIN", "GESTOR"];
 
-const MOBILE_GROUPS = [
-  {
-    label: "Operações",
-    items: [
-      { to: "/", label: "Início", end: true },
-      { to: "/vendas", label: "Vendas" },
-      { to: "/compras", label: "Compras" },
-      { to: "/estoque", label: "Estoque" },
-    ],
-  },
-  {
-    label: "Financeiro & Fiscal",
-    items: [
-      { to: "/financeiro/titulos", label: "Títulos" },
-      { to: "/financeiro/caixa", label: "Caixa" },
-      { to: "/fiscal/notas", label: "Notas fiscais" },
-    ],
-  },
-  {
-    label: "Cadastros",
-    items: [
-      { to: "/cadastros/produtos", label: "Produtos" },
-      { to: "/participantes/clientes", label: "Clientes" },
-      { to: "/participantes", label: "Participantes" },
-    ],
-  },
-];
+// Deriva o menu mobile (CardNavMenu) do MESMO navGroups usado no menu
+// desktop, em vez de manter uma segunda lista de links à mão — evitava
+// divergir silenciosamente conforme o desktop ganhava rotas novas (era
+// exatamente o que estava acontecendo: o mobile só cobria uma fração do
+// que existe no site). Links soltos (group.to, ex: "Início"/"Vendas") viram
+// itens de um grupo "Geral"; grupos com dropdown (group.items) passam direto.
+function toMobileGroups(navGroups) {
+  const soltos = navGroups.filter((g) => g.to);
+  const agrupados = navGroups.filter((g) => g.items);
+  const geral = soltos.length
+    ? [{ label: "Geral", items: soltos.map((g) => ({ to: g.to, label: g.label, end: g.end })) }]
+    : [];
+  return [...geral, ...agrupados];
+}
 
 // group.to (item de nível único, ex: "Início") ou group.items (dropdown)
 // sempre abrem/focam uma aba em vez de navegar a URL real — ver
@@ -227,7 +214,7 @@ function AppShellConteudo() {
         </div>
       </header>
 
-      <CardNavMenu groups={MOBILE_GROUPS} onAbrirAba={openTab} />
+      <CardNavMenu groups={toMobileGroups(navGroups)} onAbrirAba={openTab} />
 
       <div className="app-body">
         <TabsSidebar />
