@@ -10,7 +10,7 @@ import {
 } from "../../../lib/mercadoPago.js";
 import { AppError } from "../../../utils/AppError.js";
 
-export const VALOR_PONTO_EXTRA = new Prisma.Decimal("150.00");
+export const VALOR_PONTO_EXTRA = new Prisma.Decimal("5.00");
 
 const PONTOS_UTILIZAVEIS = { in: ["ATIVO", "CANCELAMENTO_AGENDADO"] };
 

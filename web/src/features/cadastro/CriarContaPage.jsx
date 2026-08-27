@@ -172,7 +172,7 @@ export function CriarContaPage() {
         <div className="login-brand">KAV DECK</div>
         <p className="login-sub">
           {etapa === 1
-            ? "Crie a conta da sua empresa — o primeiro acesso (admin) custa R$ 180,00/mês."
+            ? "Crie a conta da sua empresa — o primeiro acesso (admin) custa R$ 5,00/mês."
             : "Cadastre o cartão para ativar a assinatura."}
         </p>
 
@@ -222,7 +222,7 @@ export function CriarContaPage() {
           <div className="login-form">
             <p>
               Sua empresa foi criada. Falta só confirmar o cartão no checkout seguro do Mercado Pago pra
-              ativar a assinatura (R$ 180,00/mês).
+              ativar a assinatura (R$ 5,00/mês).
             </p>
             {erro && <p className="login-error">{erro}</p>}
             <Button loading={carregando} onClick={handleEtapa2} style={{ width: "100%" }}>

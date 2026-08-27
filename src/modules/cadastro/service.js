@@ -3,11 +3,11 @@ import { prisma } from "../../lib/prisma.js";
 import { criarPreapproval } from "../../lib/mercadoPago.js";
 import { AppError } from "../../utils/AppError.js";
 
-export const VALOR_PONTO_PRINCIPAL = new Prisma.Decimal("180.00");
+export const VALOR_PONTO_PRINCIPAL = new Prisma.Decimal("5.00");
 
 // Cria a Empresa + o Usuario ADMIN fundador (id = uuid do Supabase Auth,
 // exatamente como o middleware de autenticação normal exige) + o ponto
-// principal (R$180, permanente) + a assinatura ainda AGUARDANDO_PAGAMENTO —
+// principal (R$5, permanente) + a assinatura ainda AGUARDANDO_PAGAMENTO —
 // só vira ATIVA quando o webhook confirmar a autorização no Mercado Pago
 // (ver iniciarPagamento abaixo e webhookMercadoPago.js).
 export async function criarEmpresaEAdmin({ usuarioId, email, razaoSocial, cnpj, nomeAdmin, emailServico }) {

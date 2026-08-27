@@ -316,7 +316,7 @@ export function AssinaturaPage() {
           <h3 style={{ margin: 0 }}>Acessos internos</h3>
           {podeGerenciar && (
             <Button onClick={() => setModalAberto(true)} disabled={dados.status !== "ATIVA"}>
-              Criar acesso (+R$ 150,00/mês)
+              Criar acesso (+R$ 5,00/mês)
             </Button>
           )}
         </div>
