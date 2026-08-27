@@ -1,16 +1,43 @@
 import { Prisma } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
-import { criarPreapproval } from "../../lib/mercadoPago.js";
+import { buscarPreapproval, criarPreapproval } from "../../lib/mercadoPago.js";
 import { AppError } from "../../utils/AppError.js";
 
 export const VALOR_PONTO_PRINCIPAL = new Prisma.Decimal("5.00");
 
-// Cria a Empresa + o Usuario ADMIN fundador (id = uuid do Supabase Auth,
-// exatamente como o middleware de autenticação normal exige) + o ponto
-// principal (R$5, permanente) + a assinatura ainda AGUARDANDO_PAGAMENTO —
-// só vira ATIVA quando o webhook confirmar a autorização no Mercado Pago
-// (ver iniciarPagamento abaixo e webhookMercadoPago.js).
-export async function criarEmpresaEAdmin({ usuarioId, email, razaoSocial, cnpj, nomeAdmin, emailServico }) {
+function addMonths(data, meses) {
+  const resultado = new Date(data);
+  resultado.setMonth(resultado.getMonth() + meses);
+  return resultado;
+}
+
+function emailNormalizado(email) {
+  return String(email ?? "").trim().toLowerCase();
+}
+
+async function pagamentoAutorizado(preapprovalId, emailEsperado) {
+  const preapproval = await buscarPreapproval(preapprovalId);
+  const referenciaValida = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    preapproval.external_reference ?? "",
+  );
+  if (!referenciaValida || preapproval.reason !== "Assinatura KAV DECK") {
+    throw new AppError(403, "PAGAMENTO_INVALIDO", "Este pagamento não pertence ao fluxo de cadastro.");
+  }
+  if (preapproval.status !== "authorized") {
+    throw new AppError(402, "PAGAMENTO_NAO_CONFIRMADO", "O pagamento ainda não foi confirmado pelo Mercado Pago.");
+  }
+  if (emailEsperado && emailNormalizado(preapproval.payer_email) !== emailNormalizado(emailEsperado)) {
+    throw new AppError(403, "PAGAMENTO_INVALIDO", "O pagamento não pertence a este e-mail.");
+  }
+  return preapproval;
+}
+
+// Só é chamado depois da confirmação do Mercado Pago. Até este ponto não
+// existe Empresa, Usuario, assinatura ou ponto de acesso no banco local.
+export async function criarEmpresaEAdmin({ usuarioId, email, razaoSocial, cnpj, nomeAdmin, emailServico, preapprovalId }) {
+  const preapproval = await pagamentoAutorizado(preapprovalId, email);
+
   const usuarioExistente = await prisma.usuario.findUnique({ where: { id: usuarioId } });
   if (usuarioExistente) {
     throw new AppError(409, "CONFLICT", "Esta conta já está vinculada a uma empresa.");
@@ -31,7 +58,17 @@ export async function criarEmpresaEAdmin({ usuarioId, email, razaoSocial, cnpj, 
     });
 
     const assinatura = await tx.assinaturaEmpresa.create({
-      data: { empresaId: empresa.id, status: "AGUARDANDO_PAGAMENTO" },
+      data: {
+        id: preapproval.external_reference,
+        empresaId: empresa.id,
+        status: "ATIVA",
+        mpPreapprovalId: String(preapproval.id),
+        mpPayerId: preapproval.payer_id ? String(preapproval.payer_id) : null,
+        ultimoPagamentoEm: new Date(),
+        proximaCobranca: preapproval.next_payment_date
+          ? new Date(preapproval.next_payment_date)
+          : addMonths(new Date(), 1),
+      },
     });
 
     await tx.pontoAcesso.create({
@@ -42,39 +79,34 @@ export async function criarEmpresaEAdmin({ usuarioId, email, razaoSocial, cnpj, 
   });
 }
 
-// Cria a assinatura no Mercado Pago e devolve o link do checkout hospedado
-// (init_point) — é lá que o cliente confirma o cartão, não no nosso
-// formulário (ver comentário em lib/mercadoPago.js sobre a limitação da
-// ativação 100% via API neste sandbox). A AssinaturaEmpresa só vira ATIVA
-// quando o webhook confirmar a autorização (ver webhookMercadoPago.js).
-export async function iniciarPagamento({ usuarioId, backUrl }) {
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { empresaId: true, email: true },
-  });
-  if (!usuario) {
-    throw new AppError(404, "NOT_FOUND", "Cadastro de empresa não encontrado para este usuário.");
-  }
+// Gera o checkout sem persistir nenhum dado do candidato no banco local.
+// A referência aleatória vira o id da assinatura somente depois do pagamento.
+export async function iniciarPagamento({ email, cnpj, backUrl }) {
+  const [empresaExistente, usuarioExistente] = await Promise.all([
+    prisma.empresa.findUnique({ where: { cnpj }, select: { id: true } }),
+    prisma.usuario.findUnique({ where: { email }, select: { id: true } }),
+  ]);
+  if (empresaExistente) throw new AppError(409, "CONFLICT", "Já existe uma empresa cadastrada com este CNPJ.");
+  if (usuarioExistente) throw new AppError(409, "CONFLICT", "Já existe um usuário cadastrado com este e-mail.");
 
-  const assinatura = await prisma.assinaturaEmpresa.findUnique({ where: { empresaId: usuario.empresaId } });
-  if (!assinatura) {
-    throw new AppError(404, "NOT_FOUND", "Assinatura não encontrada.");
-  }
-  if (assinatura.status === "ATIVA") {
-    throw new AppError(409, "CONFLICT", "Esta assinatura já está ativa.");
-  }
+  const referenciaExterna = randomUUID();
 
   const preapproval = await criarPreapproval({
-    payerEmail: usuario.email,
+    payerEmail: email,
     valorMensal: VALOR_PONTO_PRINCIPAL,
-    referenciaExterna: assinatura.id,
+    referenciaExterna,
     backUrl,
   });
 
-  await prisma.assinaturaEmpresa.update({
-    where: { empresaId: usuario.empresaId },
-    data: { mpPreapprovalId: String(preapproval.id) },
-  });
+  return { initPoint: preapproval.init_point, preapprovalId: String(preapproval.id) };
+}
 
-  return { initPoint: preapproval.init_point };
+export async function consultarPagamento({ preapprovalId }) {
+  const preapproval = await buscarPreapproval(preapprovalId);
+  const referenciaValida = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    preapproval.external_reference ?? "",
+  );
+  return {
+    autorizado: referenciaValida && preapproval.reason === "Assinatura KAV DECK" && preapproval.status === "authorized",
+  };
 }

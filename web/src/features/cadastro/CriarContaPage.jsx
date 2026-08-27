@@ -9,11 +9,9 @@ import { supabase } from "../../lib/supabaseClient.js";
 import { AuthBackButton } from "../auth/AuthBackButton.jsx";
 import "../auth/LoginPage.css";
 
-// Guarda os dados da empresa (nunca a senha) entre o clique em "Continuar" e
-// a confirmação do e-mail: quando o Supabase exige confirmação, o signUp
-// não devolve sessão e POST /cadastro/empresa não roda — o usuário só volta
-// pro site depois de clicar no link do e-mail, em outra carga de página (ou
-// outra aba), com os campos do formulário perdidos.
+// Guarda apenas no navegador (nunca no banco e nunca a senha) os dados
+// necessários para retomar o cadastro depois do checkout e da confirmação
+// de e-mail. O backend só persiste esses dados após validar o pagamento.
 const RASCUNHO_KEY = "kav_cadastro_pendente";
 
 function salvarRascunho(dados) {
@@ -51,59 +49,38 @@ export function CriarContaPage() {
     navigate("/entrada", { replace: true });
   }
 
-  // Cobre a volta do link de confirmação de e-mail: se já existe uma sessão
-  // Supabase mas o Usuario ainda não foi criado (POST /cadastro/empresa
-  // nunca rodou), retoma sozinho usando o rascunho salvo antes do signUp. Se
-  // o Usuario já existe e só falta pagar, pula direto pra etapa 2.
+  // Retoma tanto a volta do Mercado Pago quanto a confirmação do e-mail.
+  // Antes do pagamento não existe login no Supabase nem registro local.
   useEffect(() => {
     let ativo = true;
     async function retomarSeNecessario() {
-      // A sessão já foi carregada pelo AuthContext antes desta página ser
-      // montada. Consultar auth.getSession() novamente aqui pode disputar o
-      // lock interno do Supabase e deixar `retomandoCadastro` preso em true,
-      // mantendo o React sem conteúdo e produzindo uma tela toda branca.
-      if (!session) {
-        setRetomandoCadastro(false);
-        return;
-      }
-
       const rascunho = lerRascunho();
       if (rascunho) setEmpresa((atual) => ({ ...atual, ...rascunho }));
 
-      try {
-        await apiClient.get("/me");
-        // Já tem Usuario e assinatura ativa — não devia ter caído aqui
-        // (App.jsx só chega em /criar-conta quando `me` é null), mas se
-        // acontecer não há nada a retomar.
-        limparRascunho();
-        if (ativo) setRetomandoCadastro(false);
-        return;
-      } catch (err) {
-        if (err.code === "ASSINATURA_PENDENTE") {
-          if (ativo) {
-            setEtapa(2);
-            setRetomandoCadastro(false);
-          }
-          return;
-        }
-        // Qualquer outro erro (em especial USUARIO_NAO_CADASTRADO) cai pra
-        // tentativa de retomada abaixo.
-      }
-
-      if (rascunho) {
+      if (session && rascunho?.preapprovalId) {
         try {
           await apiClient.post("/cadastro/empresa", rascunho);
           limparRascunho();
-          if (ativo) setEtapa(2);
+          if (ativo) window.location.replace("/");
+          return;
         } catch (err) {
-          // Outra aba/tentativa já criou a empresa nesse meio-tempo — só
-          // seguir pro pagamento em vez de mostrar erro.
           if (err.code === "CONFLICT") {
             limparRascunho();
-            if (ativo) setEtapa(2);
+            if (ativo) window.location.replace("/");
+            return;
           } else if (ativo) {
-            setErro("Não foi possível retomar seu cadastro automaticamente. Confira os dados abaixo e continue.");
+            setErro(err.message ?? "Não foi possível finalizar o cadastro após o pagamento.");
           }
+        }
+      }
+
+      if (!session && rascunho?.preapprovalId) {
+        try {
+          const pagamento = await apiClient.get(`/cadastro/pagamento/${rascunho.preapprovalId}`);
+          if (ativo && pagamento.autorizado) setEtapa(2);
+          else if (ativo) setErro("O pagamento ainda não foi confirmado. Conclua o checkout para continuar.");
+        } catch (err) {
+          if (ativo) setErro(err.message ?? "Não foi possível consultar o pagamento.");
         }
       }
       if (ativo) setRetomandoCadastro(false);
@@ -112,53 +89,62 @@ export function CriarContaPage() {
     return () => {
       ativo = false;
     };
-  }, [session]);
+  }, [navigate, session]);
 
-  // Cria o usuário direto no Supabase Auth (igual ao login normal — o
-  // backend nunca vê a senha) e, em seguida, cria a Empresa/Usuario/ponto
-  // principal via /cadastro/empresa, usando o JWT recém-criado.
+  // Primeiro cria somente o checkout. Empresa, usuário e login ainda não
+  // são persistidos; o rascunho fica exclusivamente neste navegador.
   async function handleEtapa1(e) {
     e.preventDefault();
     setErro("");
     setCarregando(true);
     try {
-      const rascunho = { razaoSocial: empresa.razaoSocial, cnpj: empresa.cnpj, nomeAdmin: empresa.nomeAdmin };
-      salvarRascunho(rascunho);
-
-      const { data, error } = await supabase.auth.signUp({ email: empresa.email, password: empresa.senha });
-      if (error) throw error;
-
-      if (!data.session) {
-        setErro(
-          "Conta criada! Confirme seu e-mail (verifique sua caixa de entrada) — ao clicar no link, voltamos" +
-            " pra cá e continuamos sozinhos.",
-        );
-        return;
-      }
-
-      await apiClient.post("/cadastro/empresa", rascunho);
-      limparRascunho();
-      setEtapa(2);
+      const rascunho = {
+        razaoSocial: empresa.razaoSocial,
+        cnpj: empresa.cnpj,
+        nomeAdmin: empresa.nomeAdmin,
+        email: empresa.email,
+      };
+      const { initPoint, preapprovalId } = await apiClient.post("/cadastro/pagamento", {
+        email: empresa.email,
+        cnpj: empresa.cnpj,
+      });
+      salvarRascunho({ ...rascunho, preapprovalId });
+      window.location.href = initPoint;
     } catch (err) {
-      setErro(err.message ?? "Não foi possível criar a conta. Confira os dados e tente novamente.");
+      setErro(err.message ?? "Não foi possível iniciar o pagamento. Confira os dados e tente novamente.");
     } finally {
       setCarregando(false);
     }
   }
 
-  // O cartão é sempre confirmado no checkout hospedado do próprio Mercado
-  // Pago (nunca no nosso formulário) — pedimos o link ao backend e
-  // redirecionamos o navegador pra lá. Quando o cliente terminar, o MP volta
-  // pro nosso domínio, e o webhook (assíncrono, do lado do MP) é quem ativa
-  // a assinatura de verdade — ver src/modules/cadastro/webhookMercadoPago.js.
-  async function handleEtapa2() {
+  // Só depois de o backend confirmar o pagamento cria o login. Se o projeto
+  // exigir confirmação de e-mail, os registros locais serão criados quando
+  // o cliente voltar pelo link recebido.
+  async function handleEtapa2(e) {
+    e.preventDefault();
     setErro("");
     setCarregando(true);
     try {
-      const { initPoint } = await apiClient.post("/cadastro/pagamento");
-      window.location.href = initPoint;
+      const rascunho = lerRascunho();
+      if (!rascunho?.preapprovalId) throw new Error("Pagamento confirmado não encontrado neste navegador.");
+
+      const pagamento = await apiClient.get(`/cadastro/pagamento/${rascunho.preapprovalId}`);
+      if (!pagamento.autorizado) throw new Error("O pagamento ainda não foi confirmado pelo Mercado Pago.");
+
+      const { data, error } = await supabase.auth.signUp({ email: rascunho.email, password: empresa.senha });
+      if (error) throw error;
+
+      if (!data.session) {
+        setErro("Pagamento confirmado! Confirme seu e-mail para concluir a criação da conta.");
+        return;
+      }
+
+      await apiClient.post("/cadastro/empresa", rascunho);
+      limparRascunho();
+      window.location.replace("/");
     } catch (err) {
-      setErro(err.message ?? "Não foi possível iniciar o pagamento. Tente novamente.");
+      setErro(err.message ?? "Não foi possível finalizar a criação da conta.");
+    } finally {
       setCarregando(false);
     }
   }
@@ -173,7 +159,7 @@ export function CriarContaPage() {
         <p className="login-sub">
           {etapa === 1
             ? "Crie a conta da sua empresa — o primeiro acesso (admin) custa R$ 5,00/mês."
-            : "Cadastre o cartão para ativar a assinatura."}
+            : "Pagamento confirmado — agora crie a senha do seu acesso."}
         </p>
 
         {etapa === 1 ? (
@@ -204,8 +190,16 @@ export function CriarContaPage() {
               onChange={(e) => atualizarEmpresa("email", e.target.value)}
               required
             />
+            {erro && <p className="login-error">{erro}</p>}
+            <Button type="submit" loading={carregando} style={{ width: "100%" }}>
+              Ir para o pagamento
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleEtapa2} className="login-form">
+            <Input label="E-mail" type="email" value={empresa.email} disabled />
             <Input
-              label="Senha"
+              label="Crie sua senha"
               type="password"
               autoComplete="new-password"
               minLength={6}
@@ -215,20 +209,9 @@ export function CriarContaPage() {
             />
             {erro && <p className="login-error">{erro}</p>}
             <Button type="submit" loading={carregando} style={{ width: "100%" }}>
-              Continuar
+              Criar minha conta
             </Button>
           </form>
-        ) : (
-          <div className="login-form">
-            <p>
-              Sua empresa foi criada. Falta só confirmar o cartão no checkout seguro do Mercado Pago pra
-              ativar a assinatura (R$ 5,00/mês).
-            </p>
-            {erro && <p className="login-error">{erro}</p>}
-            <Button loading={carregando} onClick={handleEtapa2} style={{ width: "100%" }}>
-              Ir para o pagamento
-            </Button>
-          </div>
         )}
       </Card>
     </div>

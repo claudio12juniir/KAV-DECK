@@ -9,12 +9,18 @@ export const criarEmpresa = asyncHandler(async (req, res) => {
     cnpj: req.body.cnpj,
     nomeAdmin: req.body.nomeAdmin,
     emailServico: req.body.emailServico,
+    preapprovalId: req.body.preapprovalId,
   });
   res.status(201).json(resultado);
 });
 
 export const iniciarPagamento = asyncHandler(async (req, res) => {
-  const backUrl = `${req.protocol}://${req.get("host")}/`;
-  const resultado = await service.iniciarPagamento({ usuarioId: req.supabaseUser.id, backUrl });
+  const backUrl = `${req.protocol}://${req.get("host")}/criar-conta?retornoPagamento=1`;
+  const resultado = await service.iniciarPagamento({ email: req.body.email, cnpj: req.body.cnpj, backUrl });
+  res.json(resultado);
+});
+
+export const consultarPagamento = asyncHandler(async (req, res) => {
+  const resultado = await service.consultarPagamento({ preapprovalId: req.params.preapprovalId });
   res.json(resultado);
 });
