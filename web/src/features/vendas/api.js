@@ -24,6 +24,14 @@ export function searchClientes(q) {
   return apiClient.get("/participantes/clientes", { q, pageSize: 10 });
 }
 
+export function getOuCriarConsumidorFinal() {
+  return apiClient.post("/participantes/clientes/consumidor-final");
+}
+
+export function duplicarPedidoVenda(id) {
+  return apiClient.post(`/vendas/pedidos/${id}/duplicar`);
+}
+
 export function getCliente(id) {
   return apiClient.get(`/participantes/clientes/${id}`);
 }

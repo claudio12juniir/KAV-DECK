@@ -13,6 +13,11 @@ export const list = asyncHandler(async (req, res) => {
   res.json(buildPaginatedResult({ items, total, page, pageSize }));
 });
 
+export const getOuCriarConsumidorFinal = asyncHandler(async (req, res) => {
+  const cliente = await service.getOuCriarConsumidorFinal({ empresaId: req.user.empresaId });
+  res.json(cliente);
+});
+
 export const getById = asyncHandler(async (req, res) => {
   const cliente = await service.getClienteTenant({
     empresaId: req.user.empresaId,

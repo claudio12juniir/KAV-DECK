@@ -718,6 +718,11 @@ model Cliente {
   vendedorPadraoId   String?               @map("vendedor_padrao_id") @db.Uuid
   rotaEntregaId      String?               @map("rota_entrega_id") @db.Uuid
   tabelaPrecoId      String?               @map("tabela_preco_id") @db.Uuid
+  // "Cliente coringa" por empresa (venda sem cadastro/consumidor final).
+  // Não há constraint de unicidade no banco (Cliente não guarda empresaId
+  // direto, só via participante) — getOuCriarConsumidorFinal() no service
+  // de clientes garante no máximo 1 por empresa lendo antes de criar.
+  consumidorFinal    Boolean               @default(false) @map("consumidor_final")
   criadoEm           DateTime              @default(now()) @map("criado_em")
   atualizadoEm       DateTime              @updatedAt @map("atualizado_em")
 

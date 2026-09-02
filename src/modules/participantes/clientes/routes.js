@@ -15,6 +15,11 @@ const listQuerySchema = paginationQuerySchema.extend({ q: z.string().min(1).max(
 const bloqueioParamSchema = z.object({ id: z.string().uuid(), bloqueioId: z.string().uuid() });
 
 router.get("/", validate({ query: listQuerySchema }), controller.list);
+router.post(
+  "/consumidor-final",
+  requireRole("VENDEDOR", "ADMIN"),
+  controller.getOuCriarConsumidorFinal,
+);
 router.get("/:id", validate({ params: idParamSchema }), controller.getById);
 router.patch(
   "/:id/bloqueio",

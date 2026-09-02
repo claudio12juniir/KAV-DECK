@@ -7,8 +7,14 @@ const SELECT = {
   vendedorPadraoId: true,
   rotaEntregaId: true,
   tabelaPrecoId: true,
+  consumidorFinal: true,
   participante: { select: { razaoSocial: true, cpfCnpj: true, ativo: true } },
 };
+
+// CPF sentinela pro cliente coringa — único por empresa via
+// @@unique([empresaId, cpfCnpj]) em Participante, então uma empresa nunca
+// tem duas linhas com este valor.
+const CPF_CONSUMIDOR_FINAL = "00000000000";
 
 // Reaproveitado pelo módulo de Vendas para checar bloqueio financeiro antes de criar pedido.
 export async function getClienteTenant({ empresaId, participanteId }) {
@@ -18,6 +24,43 @@ export async function getClienteTenant({ empresaId, participanteId }) {
   });
   if (!cliente) throw new AppError(404, "NOT_FOUND", "Cliente não encontrado.");
   return cliente;
+}
+
+// "Venda sem cadastro": em vez de tratar clienteId=null como caso especial
+// em todo o fluxo de vendas, resolve/cria um Participante+Cliente genérico
+// de verdade por empresa e devolve ele — o resto do sistema nunca sabe que
+// é diferente de um cliente comum. Idempotente: chamadas concorrentes na
+// primeira vez que a empresa usa esse atalho podem ambas tentar criar; a
+// perdedora do unique constraint (empresaId, cpfCnpj) cai no catch e
+// relê o registro que a vencedora acabou de criar.
+export async function getOuCriarConsumidorFinal({ empresaId }) {
+  const existente = await prisma.cliente.findFirst({
+    where: { consumidorFinal: true, participante: { empresaId } },
+    select: SELECT,
+  });
+  if (existente) return existente;
+
+  try {
+    const participante = await prisma.participante.create({
+      data: {
+        empresaId,
+        tipoPessoa: "FISICA",
+        razaoSocial: "Consumidor Final",
+        cpfCnpj: CPF_CONSUMIDOR_FINAL,
+        cliente: { create: { consumidorFinal: true } },
+      },
+      select: { id: true },
+    });
+    return getClienteTenant({ empresaId, participanteId: participante.id });
+  } catch (err) {
+    if (err.code === "P2002") {
+      return prisma.cliente.findFirstOrThrow({
+        where: { consumidorFinal: true, participante: { empresaId } },
+        select: SELECT,
+      });
+    }
+    throw err;
+  }
 }
 
 export async function list({ empresaId, skip, take, q }) {

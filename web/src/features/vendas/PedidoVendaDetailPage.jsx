@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
@@ -12,6 +12,7 @@ import { ProdutoAutocomplete } from "../shared/ProdutoAutocomplete.jsx";
 import {
   addItemPedidoVenda,
   arquivarPedidoVenda,
+  duplicarPedidoVenda,
   getPedidoVenda,
   removeItemPedidoVenda,
   updatePedidoVendaStatus,
@@ -36,6 +37,7 @@ function formatarMoeda(valor) {
 
 export function PedidoVendaDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const toast = useToast();
   const [pedido, setPedido] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -45,9 +47,11 @@ export function PedidoVendaDetailPage() {
   const [produtoNovo, setProdutoNovo] = useState(null);
   const [quantidadeNova, setQuantidadeNova] = useState("1");
   const [precoNovo, setPrecoNovo] = useState("0");
+  const [descontoNovo, setDescontoNovo] = useState("0");
   const [adicionandoItem, setAdicionandoItem] = useState(false);
   const [removendoItemId, setRemovendoItemId] = useState(null);
   const [arquivando, setArquivando] = useState(false);
+  const [duplicando, setDuplicando] = useState(false);
 
   async function carregar() {
     setCarregando(true);
@@ -113,16 +117,31 @@ export function PedidoVendaDetailPage() {
         produtoId: produtoNovo.id,
         quantidade: String(quantidadeNova || 0),
         precoUnitario: String(precoNovo || 0),
+        desconto: String(descontoNovo || 0),
       });
       toast.success("Item adicionado ao pedido.");
       setProdutoNovo(null);
       setQuantidadeNova("1");
       setPrecoNovo("0");
+      setDescontoNovo("0");
       await carregar();
     } catch (err) {
       toast.error(err.message ?? "Não foi possível adicionar o item.");
     } finally {
       setAdicionandoItem(false);
+    }
+  }
+
+  async function handleDuplicar() {
+    setDuplicando(true);
+    try {
+      const novoPedido = await duplicarPedidoVenda(id);
+      toast.success("Pedido duplicado com sucesso.");
+      navigate(`/vendas/${novoPedido.id}`);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível duplicar o pedido.");
+    } finally {
+      setDuplicando(false);
     }
   }
 
@@ -186,6 +205,9 @@ export function PedidoVendaDetailPage() {
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <StatusBadge status={pedido.status} />
+          <Button variant="ghost" onClick={handleDuplicar} loading={duplicando}>
+            Duplicar pedido
+          </Button>
           <Button variant="ghost" onClick={handleAlternarArquivamento} loading={arquivando}>
             {pedido.arquivado ? "Desarquivar" : "Arquivar"}
           </Button>
@@ -219,6 +241,12 @@ export function PedidoVendaDetailPage() {
                   type="number"
                   value={precoNovo}
                   onChange={(e) => setPrecoNovo(e.target.value)}
+                />
+                <Input
+                  label="Desconto"
+                  type="number"
+                  value={descontoNovo}
+                  onChange={(e) => setDescontoNovo(e.target.value)}
                 />
                 <Button onClick={handleAdicionarItem} loading={adicionandoItem}>
                   Adicionar

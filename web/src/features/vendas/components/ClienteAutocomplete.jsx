@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
-import { searchClientes } from "../api.js";
+import { getOuCriarConsumidorFinal, searchClientes } from "../api.js";
 import "../../shared/Autocomplete.css";
 
 export function ClienteAutocomplete({ selecionado, onSelecionar, onLimpar }) {
@@ -10,7 +10,21 @@ export function ClienteAutocomplete({ selecionado, onSelecionar, onLimpar }) {
   const [buscando, setBuscando] = useState(false);
   const [aberto, setAberto] = useState(false);
   const [indiceAtivo, setIndiceAtivo] = useState(-1);
+  const [resolvendoConsumidorFinal, setResolvendoConsumidorFinal] = useState(false);
   const timeoutRef = useRef(null);
+
+  // Cliente coringa por empresa: resolve/cria via API (idempotente) e
+  // seleciona igual a um cliente qualquer — dispensa buscar/cadastrar
+  // participante pra uma venda sem identificação do comprador.
+  async function handleVendaSemCadastro() {
+    setResolvendoConsumidorFinal(true);
+    try {
+      const cliente = await getOuCriarConsumidorFinal();
+      selecionar(cliente);
+    } finally {
+      setResolvendoConsumidorFinal(false);
+    }
+  }
 
   useEffect(() => {
     if (termo.trim().length < 2) {
@@ -62,7 +76,9 @@ export function ClienteAutocomplete({ selecionado, onSelecionar, onLimpar }) {
       <div className="autocomplete-selected">
         <div>
           <strong>{selecionado.participante.razaoSocial}</strong>
-          <div className="autocomplete-selected-sub">{selecionado.participante.cpfCnpj}</div>
+          <div className="autocomplete-selected-sub">
+            {selecionado.consumidorFinal ? "Venda sem cadastro" : selecionado.participante.cpfCnpj}
+          </div>
         </div>
         <div className="autocomplete-selected-actions">
           <Badge tone={bloqueado ? "danger" : "success"}>
@@ -78,14 +94,26 @@ export function ClienteAutocomplete({ selecionado, onSelecionar, onLimpar }) {
 
   return (
     <div className="autocomplete">
-      <Input
-        placeholder="Buscar por nome ou CNPJ/CPF..."
-        value={termo}
-        onChange={(e) => setTermo(e.target.value)}
-        onFocus={() => resultados.length && setAberto(true)}
-        onKeyDown={handleKeyDown}
-        hint={buscando ? "Buscando..." : "Digite ao menos 2 letras"}
-      />
+      <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
+        <div style={{ flex: 1 }}>
+          <Input
+            placeholder="Buscar por nome ou CNPJ/CPF..."
+            value={termo}
+            onChange={(e) => setTermo(e.target.value)}
+            onFocus={() => resultados.length && setAberto(true)}
+            onKeyDown={handleKeyDown}
+            hint={buscando ? "Buscando..." : "Digite ao menos 2 letras"}
+          />
+        </div>
+        <button
+          type="button"
+          className="autocomplete-trocar"
+          onClick={handleVendaSemCadastro}
+          disabled={resolvendoConsumidorFinal}
+        >
+          {resolvendoConsumidorFinal ? "Aguarde..." : "Venda sem cadastro"}
+        </button>
+      </div>
       {aberto && resultados.length > 0 && (
         <ul className="autocomplete-list">
           {resultados.map((cliente, index) => (
