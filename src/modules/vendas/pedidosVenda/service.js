@@ -246,6 +246,57 @@ export async function removeItem({ empresaId, pedidoId, itemId }) {
   await prisma.itemPedidoVenda.delete({ where: { id: itemId } });
 }
 
+// Consome o saldo de um produto sem lote pré-escolhido, sempre pelo lote de
+// validade mais próxima primeiro (FEFO) — quando a quantidade pedida
+// atravessa mais de um lote, gera um movimento de saída por lote consumido.
+// Existe pra que "escolher o lote" nunca seja um passo manual obrigatório
+// pra faturar (achado do mapeamento do concorrente: exigir isso trava o
+// fluxo mais usado do sistema; ver MAPEAMENTO_ESTOQUE_SPACESOFT.md seção 2).
+async function consumirLotesFefo(tx, { empresaId, produtoId, quantidade }) {
+  const lotesDisponiveis = await tx.lote.findMany({
+    where: { empresaId, produtoId, quantidadeAtual: { gt: 0 } },
+    orderBy: { dataValidade: "asc" },
+    select: { id: true, quantidadeAtual: true },
+  });
+
+  let restante = new Prisma.Decimal(quantidade);
+  const consumos = [];
+  for (const lote of lotesDisponiveis) {
+    if (restante.lte(0)) break;
+    const aConsumir = Prisma.Decimal.min(restante, lote.quantidadeAtual);
+    await tx.lote.update({ where: { id: lote.id }, data: { quantidadeAtual: { decrement: aConsumir } } });
+    consumos.push({ loteId: lote.id, quantidade: aConsumir });
+    restante = restante.minus(aConsumir);
+  }
+
+  if (restante.gt(0)) {
+    throw new AppError(
+      409,
+      "ESTOQUE_INSUFICIENTE",
+      `Estoque insuficiente do produto ${produtoId} (faltam ${restante.toFixed(4)} unidades).`,
+    );
+  }
+  return consumos;
+}
+
+// Consome exatamente o lote escolhido manualmente — usado quando o item vem
+// com loteId explícito (override do FEFO automático).
+async function consumirLoteEspecifico(tx, { empresaId, produtoId, loteId, quantidade }) {
+  const lote = await tx.lote.findFirst({
+    where: { id: loteId, empresaId, produtoId },
+    select: { id: true, quantidadeAtual: true },
+  });
+  if (!lote) {
+    throw new AppError(422, "INVALID_REFERENCE", `Lote ${loteId} não existe para o produto informado.`);
+  }
+  if (new Prisma.Decimal(lote.quantidadeAtual).lt(quantidade)) {
+    throw new AppError(409, "ESTOQUE_INSUFICIENTE", `Estoque insuficiente no lote ${loteId} para o produto ${produtoId}.`);
+  }
+
+  await tx.lote.update({ where: { id: loteId }, data: { quantidadeAtual: { decrement: quantidade } } });
+  return [{ loteId, quantidade: new Prisma.Decimal(quantidade) }];
+}
+
 export async function faturar({ empresaId, id, itens }) {
   const pedido = await getPedidoOrThrow({
     empresaId,
@@ -279,36 +330,30 @@ export async function faturar({ empresaId, id, itens }) {
 
   await prisma.$transaction(async (tx) => {
     for (const item of itens) {
-      const lote = await tx.lote.findFirst({
-        where: { id: item.loteId, empresaId, produtoId: item.produtoId },
-        select: { id: true, quantidadeAtual: true },
-      });
-      if (!lote) {
-        throw new AppError(422, "INVALID_REFERENCE", `Lote ${item.loteId} não existe para o produto informado.`);
-      }
-      if (new Prisma.Decimal(lote.quantidadeAtual).lt(item.quantidade)) {
-        throw new AppError(
-          409,
-          "ESTOQUE_INSUFICIENTE",
-          `Estoque insuficiente no lote ${item.loteId} para o produto ${item.produtoId}.`,
-        );
-      }
+      // loteId é opcional: quando o vendedor/separador não escolhe um lote
+      // específico, o sistema consome automaticamente pelo mais próximo do
+      // vencimento (FEFO) — vincular lote nunca bloqueia o faturamento.
+      const consumos = item.loteId
+        ? await consumirLoteEspecifico(tx, {
+            empresaId,
+            produtoId: item.produtoId,
+            loteId: item.loteId,
+            quantidade: item.quantidade,
+          })
+        : await consumirLotesFefo(tx, { empresaId, produtoId: item.produtoId, quantidade: item.quantidade });
 
-      await tx.lote.update({
-        where: { id: item.loteId },
-        data: { quantidadeAtual: { decrement: item.quantidade } },
-      });
-
-      await tx.movimentoEstoque.create({
-        data: {
-          empresaId,
-          produtoId: item.produtoId,
-          loteId: item.loteId,
-          tipo: "SAIDA",
-          quantidade: item.quantidade,
-          pedidoVendaId: id,
-        },
-      });
+      for (const consumo of consumos) {
+        await tx.movimentoEstoque.create({
+          data: {
+            empresaId,
+            produtoId: item.produtoId,
+            loteId: consumo.loteId,
+            tipo: "SAIDA",
+            quantidade: consumo.quantidade,
+            pedidoVendaId: id,
+          },
+        });
+      }
     }
 
     const valorTotal = pedido.itens.reduce(

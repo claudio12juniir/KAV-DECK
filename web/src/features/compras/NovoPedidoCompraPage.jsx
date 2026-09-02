@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { useToast } from "../../components/ui/Toast.jsx";
@@ -8,11 +8,27 @@ import { createPedidoCompra } from "./api.js";
 import { FornecedorAutocomplete } from "./components/FornecedorAutocomplete.jsx";
 import { ItensPedidoCompraTable } from "./components/ItensPedidoCompraTable.jsx";
 
+function itemInicialDoProduto(produto) {
+  if (!produto) return [];
+  return [
+    {
+      produtoId: produto.id,
+      codigo: produto.codigo,
+      descricao: produto.descricao,
+      quantidade: 1,
+      precoUnitario: produto.precoReferencia ?? 0,
+    },
+  ];
+}
+
 export function NovoPedidoCompraPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const [fornecedor, setFornecedor] = useState(null);
-  const [itens, setItens] = useState([]);
+  // Atalho vindo do kardex (Estoque > Movimentos): "Lançar pedido de
+  // compra" já chega aqui com o produto de saldo baixo pré-adicionado.
+  const [itens, setItens] = useState(() => itemInicialDoProduto(location.state?.produto));
   const [salvando, setSalvando] = useState(false);
 
   const podeSalvar = fornecedor && itens.length > 0 && !salvando;

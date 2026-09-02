@@ -17,6 +17,9 @@ const NAV_GROUPS = [
     label: "Estoque",
     items: [
       { to: "/estoque", label: "Lotes" },
+      { to: "/estoque/movimentos", label: "Movimentos" },
+      { to: "/estoque/rastreabilidade", label: "Rastreabilidade" },
+      { to: "/estoque/recebimento", label: "Terminal de recebimento" },
       { to: "/estoque/faturado", label: "Estoque faturado" },
       { to: "/estoque/previa", label: "Prévia de estoque" },
       { to: "/estoque/inventarios", label: "Inventários" },

@@ -34,7 +34,6 @@ export function FaturarPedidoVendaPage() {
         const itensComLotes = await Promise.all(
           pedido.itens.map(async (item) => {
             const { items: lotesDisponiveis } = await listLotes({ produtoId: item.produtoId, pageSize: 50 });
-            const primeiroLote = lotesDisponiveis[0];
             return {
               produtoId: item.produtoId,
               codigo: item.produto.codigo,
@@ -42,7 +41,10 @@ export function FaturarPedidoVendaPage() {
               quantidadePedida: item.quantidade,
               quantidade: item.quantidade,
               lotesDisponiveis,
-              loteId: primeiroLote?.id ?? "",
+              // "" = automático: o backend consome pelo lote mais próximo do
+              // vencimento (FEFO) sem exigir escolha manual — só se muda pra
+              // um lote específico quando isso importa de verdade.
+              loteId: "",
             };
           }),
         );
@@ -68,12 +70,17 @@ export function FaturarPedidoVendaPage() {
     return item.lotesDisponiveis.find((lote) => lote.id === item.loteId);
   }
 
+  function saldoDisponivel(item) {
+    if (item.loteId) return Number(loteSelecionado(item)?.quantidadeAtual ?? 0);
+    return item.lotesDisponiveis.reduce((soma, lote) => soma + Number(lote.quantidadeAtual), 0);
+  }
+
   const podeSalvar =
     itens.length > 0 &&
     !salvando &&
     itens.every((item) => {
-      const lote = loteSelecionado(item);
-      return lote && Number(item.quantidade) > 0 && Number(item.quantidade) <= Number(lote.quantidadeAtual);
+      if (item.lotesDisponiveis.length === 0) return false;
+      return Number(item.quantidade) > 0 && Number(item.quantidade) <= saldoDisponivel(item);
     });
 
   async function handleSalvar() {
@@ -83,7 +90,7 @@ export function FaturarPedidoVendaPage() {
         id,
         itens.map((item) => ({
           produtoId: item.produtoId,
-          loteId: item.loteId,
+          loteId: item.loteId || undefined,
           quantidade: String(item.quantidade),
         })),
       );
@@ -115,7 +122,10 @@ export function FaturarPedidoVendaPage() {
   return (
     <div>
       <h1>Faturar pedido</h1>
-      <p>Pedido de {clienteNome} — escolha o lote de cada item.</p>
+      <p>
+        Pedido de {clienteNome} — o lote é escolhido automaticamente pelo vencimento mais próximo; troque manualmente
+        só se precisar de um lote específico.
+      </p>
 
       <Card style={{ maxWidth: "900px" }}>
         <div className="data-table-wrap">
@@ -130,8 +140,7 @@ export function FaturarPedidoVendaPage() {
             </thead>
             <tbody>
               {itens.map((item, index) => {
-                const lote = loteSelecionado(item);
-                const excedeEstoque = lote && Number(item.quantidade) > Number(lote.quantidadeAtual);
+                const excedeEstoque = Number(item.quantidade) > saldoDisponivel(item);
                 return (
                   <tr key={item.produtoId}>
                     <td data-label="Produto">
@@ -150,6 +159,7 @@ export function FaturarPedidoVendaPage() {
                           value={item.loteId}
                           onChange={(e) => alterarItem(index, "loteId", e.target.value)}
                         >
+                          <option value="">Automático (lote mais próximo do vencimento)</option>
                           {item.lotesDisponiveis.map((l) => (
                             <option key={l.id} value={l.id}>
                               Validade: {formatarData(l.dataValidade)} — disponível: {l.quantidadeAtual}
@@ -169,7 +179,7 @@ export function FaturarPedidoVendaPage() {
                       />
                       {excedeEstoque && (
                         <div style={{ color: "var(--color-danger)", fontSize: "var(--text-xs)", marginTop: "4px" }}>
-                          Maior que o disponível no lote.
+                          Maior que o disponível{item.loteId ? " no lote" : ""}.
                         </div>
                       )}
                     </td>

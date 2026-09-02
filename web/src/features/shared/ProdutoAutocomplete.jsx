@@ -3,7 +3,7 @@ import { Input } from "../../components/ui/Input.jsx";
 import { searchProdutos } from "./produtosApi.js";
 import "./Autocomplete.css";
 
-export function ProdutoAutocomplete({ onSelecionar }) {
+export function ProdutoAutocomplete({ onSelecionar, label = "Adicionar produto" }) {
   const [termo, setTermo] = useState("");
   const [resultados, setResultados] = useState([]);
   const [buscando, setBuscando] = useState(false);
@@ -58,7 +58,7 @@ export function ProdutoAutocomplete({ onSelecionar }) {
   return (
     <div className="autocomplete">
       <Input
-        label="Adicionar produto"
+        label={label}
         placeholder="Buscar por código ou descrição..."
         value={termo}
         onChange={(e) => setTermo(e.target.value)}

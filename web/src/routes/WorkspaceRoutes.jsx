@@ -23,7 +23,10 @@ import { InventariosPage } from "../features/estoque/inventarios/InventariosPage
 import { NovoInventarioPage } from "../features/estoque/inventarios/NovoInventarioPage.jsx";
 import { LotesPage } from "../features/estoque/LotesPage.jsx";
 import { EstoqueFaturadoPage } from "../features/estoque/estoqueFaturado/EstoqueFaturadoPage.jsx";
+import { MovimentosPage } from "../features/estoque/movimentos/MovimentosPage.jsx";
 import { PreviaEstoquePage } from "../features/estoque/previaEstoque/PreviaEstoquePage.jsx";
+import { RastreabilidadePage } from "../features/estoque/rastreabilidade/RastreabilidadePage.jsx";
+import { RecebimentoPage } from "../features/estoque/recebimento/RecebimentoPage.jsx";
 import { CaixaPage } from "../features/financeiro/caixa/CaixaPage.jsx";
 import { CentrosCustoPage } from "../features/financeiro/centrosCusto/CentrosCustoPage.jsx";
 import { ChequesEmitidosPage } from "../features/financeiro/chequesEmitidos/ChequesEmitidosPage.jsx";
@@ -77,6 +80,9 @@ export function WorkspaceRoutes() {
       <Route path="/estoque/caixas-embalagem" element={<CaixasEmbalagemPage />} />
       <Route path="/estoque/faturado" element={<EstoqueFaturadoPage />} />
       <Route path="/estoque/previa" element={<PreviaEstoquePage />} />
+      <Route path="/estoque/movimentos" element={<MovimentosPage />} />
+      <Route path="/estoque/rastreabilidade" element={<RastreabilidadePage />} />
+      <Route path="/estoque/recebimento" element={<RecebimentoPage />} />
 
       <Route path="/cadastros/departamentos" element={<DepartamentosPage />} />
       <Route path="/cadastros/categorias" element={<CategoriasPage />} />

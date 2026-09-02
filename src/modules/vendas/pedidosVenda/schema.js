@@ -23,7 +23,9 @@ export const updateStatusSchema = z.object({
 
 export const faturarItemSchema = z.object({
   produtoId: z.string().uuid(),
-  loteId: z.string().uuid(),
+  // Opcional: se omitido, o serviço consome automaticamente pelo lote mais
+  // próximo do vencimento (FEFO) — ver consumirLotesFefo() no service.
+  loteId: z.string().uuid().optional(),
   quantidade: decimalString(),
 });
 
