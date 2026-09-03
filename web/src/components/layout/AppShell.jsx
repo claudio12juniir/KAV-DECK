@@ -11,7 +11,15 @@ import "./AppShell.css";
 
 const NAV_GROUPS = [
   { label: "Início", to: "/", end: true },
-  { label: "Vendas", to: "/vendas" },
+  {
+    label: "Vendas",
+    items: [
+      { to: "/vendas", label: "Pedidos" },
+      { to: "/vendas/devolucoes", label: "Devolução de vendas" },
+      { to: "/vendas/ocorrencias", label: "Ocorrências" },
+      { to: "/vendas/itinerario", label: "Itinerário" },
+    ],
+  },
   { label: "Compras", to: "/compras" },
   {
     label: "Estoque",

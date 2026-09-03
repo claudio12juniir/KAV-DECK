@@ -51,8 +51,11 @@ import { TransportadorasPage } from "../features/participantes/transportadoras/T
 import { RelatoriosPage } from "../features/gerenciais/relatorios/RelatoriosPage.jsx";
 import { AssinaturaPage } from "../features/sistema/assinatura/AssinaturaPage.jsx";
 import { ControleAcessoPage } from "../features/sistema/controleAcesso/ControleAcessoPage.jsx";
+import { DevolucoesPage } from "../features/vendas/devolucoes/DevolucoesPage.jsx";
 import { FaturarPedidoVendaPage } from "../features/vendas/FaturarPedidoVendaPage.jsx";
+import { ItinerarioPage } from "../features/vendas/itinerario/ItinerarioPage.jsx";
 import { NovoPedidoVendaPage } from "../features/vendas/NovoPedidoVendaPage.jsx";
+import { OcorrenciasPage } from "../features/vendas/ocorrencias/OcorrenciasPage.jsx";
 import { PedidoVendaDetailPage } from "../features/vendas/PedidoVendaDetailPage.jsx";
 import { PedidosVendaListPage } from "../features/vendas/PedidosVendaListPage.jsx";
 
@@ -69,6 +72,9 @@ export function WorkspaceRoutes() {
       <Route path="/vendas/novo" element={<NovoPedidoVendaPage />} />
       <Route path="/vendas/:id" element={<PedidoVendaDetailPage />} />
       <Route path="/vendas/:id/faturar" element={<FaturarPedidoVendaPage />} />
+      <Route path="/vendas/devolucoes" element={<DevolucoesPage />} />
+      <Route path="/vendas/ocorrencias" element={<OcorrenciasPage />} />
+      <Route path="/vendas/itinerario" element={<ItinerarioPage />} />
       <Route path="/compras" element={<PedidosCompraListPage />} />
       <Route path="/compras/novo" element={<NovoPedidoCompraPage />} />
       <Route path="/compras/:id" element={<PedidoCompraDetailPage />} />

@@ -4,7 +4,7 @@ import { Input } from "../../../components/ui/Input.jsx";
 import { getOuCriarConsumidorFinal, searchClientes } from "../api.js";
 import "../../shared/Autocomplete.css";
 
-export function ClienteAutocomplete({ selecionado, onSelecionar, onLimpar }) {
+export function ClienteAutocomplete({ selecionado, onSelecionar, onLimpar, permitirSemCadastro = true }) {
   const [termo, setTermo] = useState("");
   const [resultados, setResultados] = useState([]);
   const [buscando, setBuscando] = useState(false);
@@ -105,14 +105,16 @@ export function ClienteAutocomplete({ selecionado, onSelecionar, onLimpar }) {
             hint={buscando ? "Buscando..." : "Digite ao menos 2 letras"}
           />
         </div>
-        <button
-          type="button"
-          className="autocomplete-trocar"
-          onClick={handleVendaSemCadastro}
-          disabled={resolvendoConsumidorFinal}
-        >
-          {resolvendoConsumidorFinal ? "Aguarde..." : "Venda sem cadastro"}
-        </button>
+        {permitirSemCadastro && (
+          <button
+            type="button"
+            className="autocomplete-trocar"
+            onClick={handleVendaSemCadastro}
+            disabled={resolvendoConsumidorFinal}
+          >
+            {resolvendoConsumidorFinal ? "Aguarde..." : "Venda sem cadastro"}
+          </button>
+        )}
       </div>
       {aberto && resultados.length > 0 && (
         <ul className="autocomplete-list">

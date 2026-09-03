@@ -47,3 +47,27 @@ export function addItemPedidoVenda(id, item) {
 export function removeItemPedidoVenda(id, itemId) {
   return apiClient.delete(`/vendas/pedidos/${id}/itens/${itemId}`);
 }
+
+export function listDevolucoes({ pedidoVendaId, page, pageSize } = {}) {
+  return apiClient.get("/vendas/devolucoes", { pedidoVendaId, page, pageSize });
+}
+
+export function createDevolucao(data) {
+  return apiClient.post("/vendas/devolucoes", data);
+}
+
+export function listOcorrencias({ pedidoVendaId, clienteId, dataInicial, dataFinal, page, pageSize } = {}) {
+  return apiClient.get("/vendas/ocorrencias", { pedidoVendaId, clienteId, dataInicial, dataFinal, page, pageSize });
+}
+
+export function createOcorrencia(data) {
+  return apiClient.post("/vendas/ocorrencias", data);
+}
+
+export function consultarItinerario({ data, turno, rotaEntregaId }) {
+  return apiClient.get("/vendas/itinerario", { data, turno, rotaEntregaId });
+}
+
+export function listRotasEntrega({ page, pageSize } = {}) {
+  return apiClient.get("/participantes/rotas-entrega", { page, pageSize });
+}
