@@ -38,6 +38,7 @@ export function FaturarPedidoVendaPage() {
               produtoId: item.produtoId,
               codigo: item.produto.codigo,
               descricao: item.produto.descricao,
+              precoUnitario: item.precoUnitario,
               quantidadePedida: item.quantidade,
               quantidade: item.quantidade,
               lotesDisponiveis,
@@ -119,6 +120,8 @@ export function FaturarPedidoVendaPage() {
     );
   }
 
+  const itensComValorZero = itens.filter((item) => Number(item.precoUnitario) === 0);
+
   return (
     <div>
       <h1>Faturar pedido</h1>
@@ -126,6 +129,26 @@ export function FaturarPedidoVendaPage() {
         Pedido de {clienteNome} — o lote é escolhido automaticamente pelo vencimento mais próximo; troque manualmente
         só se precisar de um lote específico.
       </p>
+
+      {itensComValorZero.length > 0 && (
+        <Card
+          style={{
+            maxWidth: "900px",
+            marginBottom: "16px",
+            background: "var(--color-warning-soft)",
+            border: "1px solid var(--color-warning)",
+          }}
+        >
+          <strong style={{ color: "var(--color-warning)" }}>
+            {itensComValorZero.length === 1 ? "1 item está" : `${itensComValorZero.length} itens estão`} sendo
+            faturado{itensComValorZero.length === 1 ? "" : "s"} por R$ 0,00
+          </strong>
+          <p style={{ margin: "4px 0 0" }}>
+            {itensComValorZero.map((item) => item.descricao).join(", ")} — confira se é bonificação antes de
+            confirmar.
+          </p>
+        </Card>
+      )}
 
       <Card style={{ maxWidth: "900px" }}>
         <div className="data-table-wrap">

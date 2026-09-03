@@ -174,7 +174,18 @@ export function PedidoVendaDetailPage() {
   const columns = [
     { key: "produto", label: "Produto", render: (row) => row.produto.descricao },
     { key: "quantidade", label: "Qtd." },
-    { key: "precoUnitario", label: "Preço unit.", render: (row) => formatarMoeda(row.precoUnitario) },
+    {
+      key: "precoUnitario",
+      label: "Preço unit.",
+      render: (row) => (
+        <>
+          {formatarMoeda(row.precoUnitario)}
+          {Number(row.precoUnitario) === 0 && (
+            <div style={{ color: "var(--color-warning)", fontSize: "var(--text-xs)" }}>Valor zero</div>
+          )}
+        </>
+      ),
+    },
     { key: "desconto", label: "Desconto", render: (row) => formatarMoeda(row.desconto) },
     ...(podeEditarItens
       ? [
@@ -241,6 +252,7 @@ export function PedidoVendaDetailPage() {
                   type="number"
                   value={precoNovo}
                   onChange={(e) => setPrecoNovo(e.target.value)}
+                  hint={Number(precoNovo) === 0 ? "Item a R$ 0,00 — confira se é bonificação." : undefined}
                 />
                 <Input
                   label="Desconto"

@@ -56,6 +56,11 @@ export function ItensPedidoTable({ itens, onChangeItem, onRemoveItem }) {
                     value={item.precoUnitario}
                     onChange={(e) => onChangeItem(index, "precoUnitario", e.target.value)}
                   />
+                  {Number(item.precoUnitario) === 0 && (
+                    <div style={{ color: "var(--color-warning)", fontSize: "var(--text-xs)", marginTop: "4px" }}>
+                      Item a R$ 0,00 — confira se é bonificação antes de continuar.
+                    </div>
+                  )}
                 </td>
                 <td data-label="Desconto">
                   <input
