@@ -14,6 +14,7 @@ export const createPedidoVendaSchema = z.object({
   tabelaPrecoId: z.string().uuid().optional(),
   condicaoPagamentoId: z.string().uuid().optional(),
   rotaEntregaId: z.string().uuid().optional(),
+  turno: z.enum(["MANHA", "TARDE", "NOITE", "SOS", "RETIRA"]).optional(),
   itens: z.array(itemPedidoVendaSchema).optional(),
 });
 
@@ -66,4 +67,12 @@ export const atribuirItinerarioSchema = z
 
 export const arquivarSchema = z.object({
   arquivado: z.boolean(),
+});
+
+export const atualizarVendedorSchema = z.object({
+  vendedorId: z.string().uuid().nullable(),
+});
+
+export const atualizarClienteSchema = z.object({
+  clienteId: z.string().uuid(),
 });

@@ -5,11 +5,7 @@ import "./CardNavMenu.css";
 
 const TONES = ["mono", "accent", "mono"];
 
-// onAbrirAba(path, label) substitui a navegação real por <NavLink> — o
-// conteúdo agora mora dentro do sistema de abas (ver AppShell.jsx e
-// TabsContext.jsx), não na URL do navegador, então um clique aqui precisa
-// abrir/focar uma aba em vez de navegar de verdade.
-export function CardNavMenu({ brand = "KAV DECK", groups, onAbrirAba, ease = "power3.out" }) {
+export function CardNavMenu({ brand = "KAV DECK", groups, onNavegar, ease = "power3.out" }) {
   const [isOpen, setIsOpen] = useState(false);
   const navRef = useRef(null);
   const cardsRef = useRef([]);
@@ -104,7 +100,7 @@ export function CardNavMenu({ brand = "KAV DECK", groups, onAbrirAba, ease = "po
                     className="nav-card-link"
                     onClick={() => {
                       toggleMenu();
-                      onAbrirAba?.(item.to, item.label);
+                      onNavegar?.(item.to);
                     }}
                   >
                     <GoArrowUpRight className="nav-card-link-icon" aria-hidden="true" />

@@ -9,6 +9,8 @@ export const list = asyncHandler(async (req, res) => {
     skip,
     take,
     pedidoVendaId: req.query.pedidoVendaId,
+    dataInicial: req.query.dataInicial,
+    dataFinal: req.query.dataFinal,
   });
   res.json(buildPaginatedResult({ items, total, page, pageSize }));
 });

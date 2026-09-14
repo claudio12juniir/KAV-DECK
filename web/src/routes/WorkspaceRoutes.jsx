@@ -53,17 +53,17 @@ import { AssinaturaPage } from "../features/sistema/assinatura/AssinaturaPage.js
 import { ControleAcessoPage } from "../features/sistema/controleAcesso/ControleAcessoPage.jsx";
 import { DevolucoesPage } from "../features/vendas/devolucoes/DevolucoesPage.jsx";
 import { FaturarPedidoVendaPage } from "../features/vendas/FaturarPedidoVendaPage.jsx";
+import { ItensVendaPage } from "../features/vendas/itensVenda/ItensVendaPage.jsx";
 import { ItinerarioPage } from "../features/vendas/itinerario/ItinerarioPage.jsx";
 import { NovoPedidoVendaPage } from "../features/vendas/NovoPedidoVendaPage.jsx";
 import { OcorrenciasPage } from "../features/vendas/ocorrencias/OcorrenciasPage.jsx";
 import { PedidoVendaDetailPage } from "../features/vendas/PedidoVendaDetailPage.jsx";
 import { PedidosVendaListPage } from "../features/vendas/PedidosVendaListPage.jsx";
+import { TerminalSeparadoresPage } from "../features/vendas/separadores/TerminalSeparadoresPage.jsx";
 
-// Toda a área autenticada, montada dentro do <MemoryRouter> próprio de cada
-// aba (ver AppShell.jsx) — por isso não tem rota de login/entrada/criar-conta
-// aqui, essas ficam só no router real (App.jsx). useNavigate/<Link> usados
-// dentro de qualquer uma dessas páginas navegam só na aba onde estão
-// montados, nunca na URL real do navegador nem nas outras abas.
+// Toda a área autenticada, montada sob o <BrowserRouter> real (ver App.jsx)
+// — por isso não tem rota de login/entrada/criar-conta aqui, essas ficam só
+// em PreAuthRoutes.
 export function WorkspaceRoutes() {
   return (
     <Routes>
@@ -75,6 +75,23 @@ export function WorkspaceRoutes() {
       <Route path="/vendas/devolucoes" element={<DevolucoesPage />} />
       <Route path="/vendas/ocorrencias" element={<OcorrenciasPage />} />
       <Route path="/vendas/itinerario" element={<ItinerarioPage />} />
+      <Route
+        path="/vendas/controle-producao"
+        element={<ItensVendaPage variante="producao" titulo="Controle de Produção" descricao="Itens de pedidos de venda emitidos num dia específico — o que precisa ser preparado/separado naquele dia." />}
+      />
+      <Route
+        path="/vendas/consulta-itens"
+        element={<ItensVendaPage variante="consulta" titulo="Consulta de Itens" descricao="Todos os itens vendidos, cruzando todos os pedidos e clientes num único grid." />}
+      />
+      <Route
+        path="/vendas/lista-compra"
+        element={<ItensVendaPage variante="listaCompra" titulo="Listagem para Compra" descricao="Itens vendidos e se já foram repassados como lista de reposição para o comprador." />}
+      />
+      <Route
+        path="/vendas/terminal-precos"
+        element={<ItensVendaPage variante="terminalPrecos" titulo="Terminal de Preços" descricao="Auditoria de precificação — por padrão, mostra itens vendidos por R$ 0,00." />}
+      />
+      <Route path="/vendas/separadores" element={<TerminalSeparadoresPage />} />
       <Route path="/compras" element={<PedidosCompraListPage />} />
       <Route path="/compras/novo" element={<NovoPedidoCompraPage />} />
       <Route path="/compras/:id" element={<PedidoCompraDetailPage />} />

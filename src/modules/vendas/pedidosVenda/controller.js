@@ -118,3 +118,21 @@ export const arquivar = asyncHandler(async (req, res) => {
   });
   res.json(pedido);
 });
+
+export const atualizarVendedor = asyncHandler(async (req, res) => {
+  const pedido = await service.atualizarVendedor({
+    empresaId: req.user.empresaId,
+    id: req.params.id,
+    vendedorId: req.body.vendedorId,
+  });
+  res.json(pedido);
+});
+
+export const atualizarCliente = asyncHandler(async (req, res) => {
+  const pedido = await service.atualizarCliente({
+    empresaId: req.user.empresaId,
+    id: req.params.id,
+    clienteId: req.body.clienteId,
+  });
+  res.json(pedido);
+});

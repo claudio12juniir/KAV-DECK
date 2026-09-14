@@ -9,6 +9,7 @@ export const router = Router();
 
 router.use(auth);
 
+router.get("/opcoes", controller.listarOpcoes);
 router.get("/", validate({ query: listOcorrenciasQuerySchema }), controller.list);
 router.get("/:id", validate({ params: idParamSchema }), controller.getById);
 router.post("/", validate({ body: createOcorrenciaSchema }), controller.create);

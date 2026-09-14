@@ -28,6 +28,8 @@ import { router as faturaProdutorRouter } from "../modules/compras/faturaProduto
 import { router as pedidosVendaRouter } from "../modules/vendas/pedidosVenda/routes.js";
 import { router as devolucoesVendaRouter } from "../modules/vendas/devolucoesVenda/routes.js";
 import { router as ocorrenciasRouter } from "../modules/vendas/ocorrencias/routes.js";
+import { router as itensVendaRouter } from "../modules/vendas/itensVenda/routes.js";
+import { router as separadoresRouter } from "../modules/vendas/separadores/routes.js";
 
 import { router as lotesRouter } from "../modules/estoque/lotes/routes.js";
 import { router as movimentosEstoqueRouter } from "../modules/estoque/movimentos/routes.js";
@@ -112,6 +114,8 @@ router.use("/vendas/pedidos", pedidosVendaRouter);
 router.use("/vendas/devolucoes", devolucoesVendaRouter);
 router.use("/vendas/ocorrencias", ocorrenciasRouter);
 router.use("/vendas/itinerario", itinerarioRouter);
+router.use("/vendas/itens", itensVendaRouter);
+router.use("/vendas/separadores", separadoresRouter);
 
 router.use("/estoque/lotes", lotesRouter);
 router.use("/estoque/movimentos", movimentosEstoqueRouter);

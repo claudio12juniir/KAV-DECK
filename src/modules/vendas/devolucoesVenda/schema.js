@@ -14,4 +14,6 @@ export const createDevolucaoSchema = z.object({
 
 export const listDevolucoesQuerySchema = paginationQuerySchema.extend({
   pedidoVendaId: z.string().uuid().optional(),
+  dataInicial: z.coerce.date().optional(),
+  dataFinal: z.coerce.date().optional(),
 });

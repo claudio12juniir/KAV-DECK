@@ -1,19 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
+import { Select } from "../../components/ui/Select.jsx";
 import { useToast } from "../../components/ui/Toast.jsx";
 import { ProdutoAutocomplete } from "../shared/ProdutoAutocomplete.jsx";
-import { createPedidoVenda } from "./api.js";
+import { createPedidoVenda, listColaboradores } from "./api.js";
 import { ClienteAutocomplete } from "./components/ClienteAutocomplete.jsx";
 import { ItensPedidoTable } from "./components/ItensPedidoTable.jsx";
+
+const TURNO_LABEL = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite", SOS: "SOS", RETIRA: "Retira" };
 
 export function NovoPedidoVendaPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [cliente, setCliente] = useState(null);
+  const [vendedorId, setVendedorId] = useState("");
+  const [turno, setTurno] = useState("");
+  const [vendedores, setVendedores] = useState([]);
   const [itens, setItens] = useState([]);
   const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    listColaboradores({ tipo: "VENDEDOR", pageSize: 100 }).then(({ items }) => setVendedores(items));
+  }, []);
 
   const clienteBloqueado = cliente?.bloqueioFinanceiro === "BLOQUEADO";
   const podeSalvar = cliente && !clienteBloqueado && itens.length > 0 && !salvando;
@@ -45,6 +55,8 @@ export function NovoPedidoVendaPage() {
     try {
       const pedido = await createPedidoVenda({
         clienteId: cliente.participanteId,
+        vendedorId: vendedorId || undefined,
+        turno: turno || undefined,
         itens: itens.map((item) => ({
           produtoId: item.produtoId,
           quantidade: String(item.quantidade),
@@ -75,6 +87,28 @@ export function NovoPedidoVendaPage() {
               Este cliente está com bloqueio financeiro ativo e não pode receber novos pedidos.
             </p>
           )}
+        </Card>
+
+        <Card>
+          <h3>Vendedor e entrega</h3>
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            <Select label="Vendedor/Representante" value={vendedorId} onChange={(e) => setVendedorId(e.target.value)}>
+              <option value="">Não atribuído</option>
+              {vendedores.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nome}
+                </option>
+              ))}
+            </Select>
+            <Select label="Saída/Entrega" value={turno} onChange={(e) => setTurno(e.target.value)}>
+              <option value="">Não definido</option>
+              {Object.entries(TURNO_LABEL).map(([valor, label]) => (
+                <option key={valor} value={valor}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </div>
         </Card>
 
         <Card>

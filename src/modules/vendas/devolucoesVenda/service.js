@@ -19,6 +19,36 @@ const SELECT_DETAIL = {
   },
 };
 
+// Grid da tela de referência (Space Soft) mostra CLIENTE, VALOR DA DEV. e
+// VALOR DO PED. ao lado de cada linha — ItemDevolucaoVenda não guarda preço
+// próprio (só quantidade), então pra montar essas colunas é preciso trazer o
+// pedido de origem junto e casar preço por produtoId.
+const SELECT_LISTA = {
+  ...SELECT_DETAIL,
+  pedidoVenda: {
+    select: {
+      id: true,
+      dataEmissao: true,
+      cliente: { select: { participante: { select: { razaoSocial: true } } } },
+      itens: { select: { produtoId: true, quantidade: true, precoUnitario: true, desconto: true } },
+    },
+  },
+};
+
+function valorItens(itens) {
+  return itens.reduce((soma, item) => soma + Number(item.quantidade) * Number(item.precoUnitario) - Number(item.desconto || 0), 0);
+}
+
+function comValores(devolucao) {
+  const precoPorProduto = new Map(devolucao.pedidoVenda.itens.map((item) => [item.produtoId, Number(item.precoUnitario)]));
+  const valorDevolucao = devolucao.itens.reduce((soma, item) => soma + Number(item.quantidade) * (precoPorProduto.get(item.produtoId) ?? 0), 0);
+  return {
+    ...devolucao,
+    valorDevolucao,
+    valorPedido: valorItens(devolucao.pedidoVenda.itens),
+  };
+}
+
 async function getPedidoVendaOrThrow({ empresaId, id }) {
   const pedido = await prisma.pedidoVenda.findFirst({
     where: { id, empresaId },
@@ -28,13 +58,19 @@ async function getPedidoVendaOrThrow({ empresaId, id }) {
   return pedido;
 }
 
-export async function list({ empresaId, skip, take, pedidoVendaId }) {
-  const where = { pedidoVenda: { empresaId }, ...(pedidoVendaId ? { pedidoVendaId } : {}) };
+export async function list({ empresaId, skip, take, pedidoVendaId, dataInicial, dataFinal }) {
+  const where = {
+    pedidoVenda: { empresaId },
+    ...(pedidoVendaId ? { pedidoVendaId } : {}),
+    ...(dataInicial || dataFinal
+      ? { data: { ...(dataInicial ? { gte: dataInicial } : {}), ...(dataFinal ? { lte: dataFinal } : {}) } }
+      : {}),
+  };
   const [items, total] = await Promise.all([
-    prisma.devolucaoVenda.findMany({ where, select: SELECT_DETAIL, skip, take, orderBy: { data: "desc" } }),
+    prisma.devolucaoVenda.findMany({ where, select: SELECT_LISTA, skip, take, orderBy: { data: "desc" } }),
     prisma.devolucaoVenda.count({ where }),
   ]);
-  return { items, total };
+  return { items: items.map(comValores), total };
 }
 
 export async function getById({ empresaId, id }) {

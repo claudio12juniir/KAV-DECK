@@ -11,12 +11,6 @@ import { PrivacidadePage } from "./features/auth/PrivacidadePage.jsx";
 import { RedefinirSenhaPage } from "./features/auth/RedefinirSenhaPage.jsx";
 import { CriarContaPage } from "./features/cadastro/CriarContaPage.jsx";
 
-// Só as páginas de fora da área logada moram atrás de um <BrowserRouter> de
-// verdade — a área autenticada (AppShell) nunca fica aninhada dentro dele
-// (ver AppGate mais abaixo pro porquê): cada aba do workspace cria seu
-// próprio <MemoryRouter>, e o React Router recusa em runtime renderizar um
-// <Router> dentro de outro <Router>, então AppShell precisa ser a raiz da
-// própria árvore de routers, não uma descendente desta.
 function PreAuthRoutes() {
   const { session, me, precisaFinalizarCadastro, sessaoEncerradaMotivo, limparAvisoSessaoEncerrada } = useAuth();
   const toast = useToast();
@@ -69,27 +63,20 @@ function PreAuthRoutes() {
   );
 }
 
-// Decide entre "mostrar as páginas de fora" (dentro de um <BrowserRouter>
-// de verdade, porque login/cadastro/recuperação de senha precisam de URL
-// real e endereçável) e "mostrar o workspace autenticado" (AppShell, sem
-// nenhum Router ao redor — ele monta os próprios por aba). `/redefinir-senha`
-// é a única exceção: mesmo com sessão válida (a de recuperação), sempre passa
-// por PreAuthRoutes primeiro.
+// Decide entre "mostrar as páginas de fora" (login/cadastro/recuperação de
+// senha) e "mostrar o workspace autenticado" (AppShell) — ambos vivem sob o
+// mesmo <BrowserRouter> real, com URL endereçável de ponta a ponta.
+// `/redefinir-senha` é a única exceção: mesmo com sessão válida (a de
+// recuperação), sempre passa por PreAuthRoutes primeiro.
 function AppGate() {
   const { session, me, loading, precisaFinalizarCadastro } = useAuth();
 
   if (loading) return null;
 
   const rotaRecuperacaoSenha = window.location.pathname === "/redefinir-senha";
-  if (!rotaRecuperacaoSenha && session && me && !precisaFinalizarCadastro) {
-    return <AppShell />;
-  }
+  const autenticado = !rotaRecuperacaoSenha && session && me && !precisaFinalizarCadastro;
 
-  return (
-    <Router>
-      <PreAuthRoutes />
-    </Router>
-  );
+  return <Router>{autenticado ? <AppShell /> : <PreAuthRoutes />}</Router>;
 }
 
 export default function App() {

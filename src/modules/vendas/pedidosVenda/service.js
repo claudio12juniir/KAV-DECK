@@ -28,7 +28,20 @@ const SELECT_HEADER = {
   criadoEm: true,
   atualizadoEm: true,
   cliente: { select: { participante: { select: { razaoSocial: true, cpfCnpj: true } } } },
+  vendedor: { select: { nome: true } },
+  separador: { select: { nome: true } },
+  // Só quantidade/preço/desconto (sem produto) — o bastante pra computar
+  // "VALOR TOTAL" na grid de consulta (seção 6 do mapeamento) sem o custo
+  // de trazer a descrição de cada item, que a lista nunca mostra.
+  itens: { select: { quantidade: true, precoUnitario: true, desconto: true } },
 };
+
+function valorTotalPedido(pedido) {
+  return pedido.itens.reduce(
+    (soma, item) => soma.plus(new Prisma.Decimal(item.quantidade).times(item.precoUnitario).minus(item.desconto ?? 0)),
+    new Prisma.Decimal(0),
+  );
+}
 
 const SELECT_DETAIL = {
   ...SELECT_HEADER,
@@ -141,10 +154,11 @@ export async function list({ empresaId, skip, take, status, filtro, separadorId,
       ? { dataEmissao: { ...(dataInicial ? { gte: dataInicial } : {}), ...(dataFinal ? { lte: dataFinal } : {}) } }
       : {}),
   };
-  const [items, total] = await Promise.all([
+  const [pedidos, total] = await Promise.all([
     prisma.pedidoVenda.findMany({ where, select: SELECT_HEADER, skip, take, orderBy: { dataEmissao: "desc" } }),
     prisma.pedidoVenda.count({ where }),
   ]);
+  const items = pedidos.map(({ itens, ...pedido }) => ({ ...pedido, valorTotal: valorTotalPedido({ itens }) }));
   return { items, total };
 }
 
@@ -609,4 +623,24 @@ export async function atribuirItinerario({ empresaId, id, rotaEntregaId, turno }
 export async function arquivar({ empresaId, id, arquivado }) {
   await getPedidoOrThrow({ empresaId, id, select: { id: true } });
   return prisma.pedidoVenda.update({ where: { id }, data: { arquivado }, select: SELECT_DETAIL });
+}
+
+// Terminal de Venda (referência Space Soft) deixa trocar o vendedor/
+// representante do pedido a qualquer momento, igual ao separador — sem
+// gate de status, só existência do colaborador.
+export async function atualizarVendedor({ empresaId, id, vendedorId }) {
+  await getPedidoOrThrow({ empresaId, id, select: { id: true } });
+  await ensureVendedor({ empresaId, vendedorId });
+  return prisma.pedidoVenda.update({ where: { id }, data: { vendedorId }, select: SELECT_DETAIL });
+}
+
+// Trocar cliente só é seguro enquanto o pedido está ABERTO — depois disso
+// já pode haver título/NF gerados a partir do cliente original.
+export async function atualizarCliente({ empresaId, id, clienteId }) {
+  const pedido = await getPedidoOrThrow({ empresaId, id, select: { id: true, status: true } });
+  if (pedido.status !== "ABERTO") {
+    throw new AppError(409, "PEDIDO_NAO_EDITAVEL", "Só é possível trocar o cliente enquanto o pedido está aberto.");
+  }
+  await ensureCliente({ empresaId, clienteId });
+  return prisma.pedidoVenda.update({ where: { id }, data: { clienteId }, select: SELECT_DETAIL });
 }

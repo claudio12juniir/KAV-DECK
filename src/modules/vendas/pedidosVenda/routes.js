@@ -10,6 +10,8 @@ import {
   aplicarDescontoSchema,
   arquivarSchema,
   atribuirItinerarioSchema,
+  atualizarClienteSchema,
+  atualizarVendedorSchema,
   createPedidoVendaSchema,
   dividirSchema,
   faturarSchema,
@@ -104,4 +106,16 @@ router.patch(
   requireRole("VENDEDOR", "ADMIN"),
   validate({ params: idParamSchema, body: arquivarSchema }),
   controller.arquivar,
+);
+router.patch(
+  "/:id/vendedor",
+  requireRole("VENDEDOR", "ADMIN"),
+  validate({ params: idParamSchema, body: atualizarVendedorSchema }),
+  controller.atualizarVendedor,
+);
+router.patch(
+  "/:id/cliente",
+  requireRole("VENDEDOR", "ADMIN"),
+  validate({ params: idParamSchema, body: atualizarClienteSchema }),
+  controller.atualizarCliente,
 );

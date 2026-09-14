@@ -206,6 +206,7 @@ model Empresa {
   chequesTerceiros       ChequeTerceiro[]
   notasFiscais           NotaFiscal[]
   ocorrencias            Ocorrencia[]
+  itinerarios            Itinerario[]
   naturezasOperacao      NaturezaOperacao[]
   certificadosDigitais   CertificadoDigital[]
   precosCompra           PrecoCompra[]
@@ -485,6 +486,7 @@ model Produto {
   itensPedidoCompra   ItemPedidoCompra[]
   itensPedidoVenda    ItemPedidoVenda[]
   itensDevolucaoVenda ItemDevolucaoVenda[]
+  itensOcorrencia     ItemOcorrencia[]
   lotes               Lote[]
   movimentosEstoque   MovimentoEstoque[]
   itensInventario     ItemInventario[]
@@ -804,6 +806,7 @@ model Transportadora {
   participante  Participante?  @relation(fields: [participanteId], references: [id], onDelete: SetNull)
   rotasEntrega  RotaEntrega[]
   pedidosCompra PedidoCompra[]
+  itinerarios   Itinerario[]
 
   @@unique([empresaId, cnpj])
   @@index([empresaId])
@@ -823,9 +826,38 @@ model RotaEntrega {
 
   clientes     Cliente[]
   pedidosVenda PedidoVenda[]
+  itinerarios  Itinerario[]
 
   @@index([empresaId])
   @@map("rotas_entrega")
+}
+
+// Roteiro de entrega do dia (mapeamento SpaceSoft seção 14) — entidade
+// persistida de verdade, diferente da consulta em memória que existia antes
+// (agrupamento de PedidoVenda por rota/turno). "Gerar automático" cria um
+// registro destes agrupando os pedidos FATURADOS do dia por rota+turno; um
+// itinerário criado manualmente também aceita pedidos avulsos depois.
+model Itinerario {
+  id               String        @id @default(uuid()) @db.Uuid
+  empresaId        String        @map("empresa_id") @db.Uuid
+  data             DateTime      @db.Date
+  periodo          TurnoEntrega?
+  rotaEntregaId    String        @map("rota_entrega_id") @db.Uuid
+  transportadoraId String?       @map("transportadora_id") @db.Uuid
+  placaVeiculo     String?       @map("placa_veiculo")
+  valorFrete       Decimal       @default(0) @map("valor_frete") @db.Decimal(14, 2)
+  faturaGerada     Boolean       @default(false) @map("fatura_gerada")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+  atualizadoEm     DateTime      @updatedAt @map("atualizado_em")
+
+  empresa        Empresa            @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  rotaEntrega    RotaEntrega        @relation(fields: [rotaEntregaId], references: [id], onDelete: Restrict)
+  transportadora Transportadora?    @relation(fields: [transportadoraId], references: [id], onDelete: SetNull)
+  pedidos        PedidoVenda[]
+  titulos        TituloFinanceiro[]
+
+  @@index([empresaId, data])
+  @@map("itinerarios")
 }
 
 // =========================================================================
@@ -919,6 +951,7 @@ model PedidoVenda {
   condicaoPagamentoId String?           @map("condicao_pagamento_id") @db.Uuid
   rotaEntregaId       String?           @map("rota_entrega_id") @db.Uuid
   separadorId         String?           @map("separador_id") @db.Uuid
+  itinerarioId        String?           @map("itinerario_id") @db.Uuid
   turno               TurnoEntrega?
   dataEmissao         DateTime          @default(now()) @map("data_emissao")
   status              StatusPedidoVenda @default(ABERTO)
@@ -934,6 +967,7 @@ model PedidoVenda {
   tabelaPreco       TabelaPreco?       @relation(fields: [tabelaPrecoId], references: [id], onDelete: SetNull)
   condicaoPagamento CondicaoPagamento? @relation(fields: [condicaoPagamentoId], references: [id], onDelete: SetNull)
   rotaEntrega       RotaEntrega?       @relation(fields: [rotaEntregaId], references: [id], onDelete: SetNull)
+  itinerario        Itinerario?        @relation(fields: [itinerarioId], references: [id], onDelete: SetNull)
 
   itens                 ItemPedidoVenda[]
   devolucoes            DevolucaoVenda[]
@@ -959,15 +993,37 @@ model Ocorrencia {
   clienteId     String?  @map("cliente_id") @db.Uuid
   tipo          String
   motivo        String
+  // "Qual foi a Resolução?" (mapeamento SpaceSoft seção 13) — combobox
+  // creatable igual Tipo, mas opcional: a ocorrência pode nascer sem
+  // resolução ainda definida.
+  resolucao     String?
   data          DateTime @default(now())
   criadoEm      DateTime @default(now()) @map("criado_em")
 
-  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  pedidoVenda PedidoVenda? @relation(fields: [pedidoVendaId], references: [id], onDelete: SetNull)
-  cliente     Cliente?     @relation(fields: [clienteId], references: [participanteId], onDelete: SetNull)
+  empresa     Empresa          @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  pedidoVenda PedidoVenda?     @relation(fields: [pedidoVendaId], references: [id], onDelete: SetNull)
+  cliente     Cliente?         @relation(fields: [clienteId], references: [participanteId], onDelete: SetNull)
+  itens       ItemOcorrencia[]
 
   @@index([empresaId, data])
   @@map("ocorrencias")
+}
+
+// Granularidade por item (não só por pedido inteiro) — ver seção 13/17.11
+// do mapeamento: permite relatório futuro de "quais produtos mais geram
+// ocorrência", não só "quais pedidos".
+model ItemOcorrencia {
+  id           String  @id @default(uuid()) @db.Uuid
+  ocorrenciaId String  @map("ocorrencia_id") @db.Uuid
+  produtoId    String  @map("produto_id") @db.Uuid
+  quantidade   Decimal @db.Decimal(14, 4)
+  valor        Decimal @default(0) @db.Decimal(14, 4)
+
+  ocorrencia Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
+  produto    Produto    @relation(fields: [produtoId], references: [id], onDelete: Restrict)
+
+  @@index([ocorrenciaId])
+  @@map("itens_ocorrencia")
 }
 
 model ItemPedidoVenda {
@@ -977,6 +1033,11 @@ model ItemPedidoVenda {
   quantidade    Decimal @db.Decimal(14, 4)
   precoUnitario Decimal @map("preco_unitario") @db.Decimal(14, 4)
   desconto      Decimal @default(0) @db.Decimal(14, 4)
+  observacao    String?
+  // Tela "Listagem para Compra" (mapeamento SpaceSoft seção 11): marca se o
+  // item já foi repassado pro comprador como lista de reposição. Não afeta
+  // nenhum outro fluxo — é só um checkbox de workflow.
+  impresso      Boolean @default(false)
 
   pedidoVenda PedidoVenda @relation(fields: [pedidoVendaId], references: [id], onDelete: Cascade)
   produto     Produto     @relation(fields: [produtoId], references: [id], onDelete: Restrict)
@@ -1153,6 +1214,7 @@ model TituloFinanceiro {
   nossoNumero      String?      @map("nosso_numero")
   pedidoCompraId   String?      @map("pedido_compra_id") @db.Uuid
   pedidoVendaId    String?      @map("pedido_venda_id") @db.Uuid
+  itinerarioId     String?      @map("itinerario_id") @db.Uuid
   tituloOrigemId   String?      @map("titulo_origem_id") @db.Uuid
   tituloAgrupadoId String?      @map("titulo_agrupado_id") @db.Uuid
   criadoEm         DateTime     @default(now()) @map("criado_em")
@@ -1162,6 +1224,7 @@ model TituloFinanceiro {
   participante     Participante       @relation(fields: [participanteId], references: [id], onDelete: Restrict)
   pedidoCompra     PedidoCompra?      @relation(fields: [pedidoCompraId], references: [id], onDelete: SetNull)
   pedidoVenda      PedidoVenda?       @relation(fields: [pedidoVendaId], references: [id], onDelete: SetNull)
+  itinerario       Itinerario?        @relation(fields: [itinerarioId], references: [id], onDelete: SetNull)
   tituloOrigem     TituloFinanceiro?  @relation("ParcelasTitulo", fields: [tituloOrigemId], references: [id], onDelete: SetNull)
   parcelas         TituloFinanceiro[] @relation("ParcelasTitulo")
   // Quando este título foi absorvido por um agrupamento (ver agrupar() no

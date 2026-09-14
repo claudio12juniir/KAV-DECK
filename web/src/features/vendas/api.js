@@ -1,7 +1,7 @@
 import { apiClient } from "../../lib/apiClient.js";
 
-export function listPedidosVenda({ status, filtro, page, pageSize } = {}) {
-  return apiClient.get("/vendas/pedidos", { status, filtro, page, pageSize });
+export function listPedidosVenda({ status, filtro, separadorId, dataInicial, dataFinal, page, pageSize } = {}) {
+  return apiClient.get("/vendas/pedidos", { status, filtro, separadorId, dataInicial, dataFinal, page, pageSize });
 }
 
 export function arquivarPedidoVenda(id, arquivado) {
@@ -48,8 +48,8 @@ export function removeItemPedidoVenda(id, itemId) {
   return apiClient.delete(`/vendas/pedidos/${id}/itens/${itemId}`);
 }
 
-export function listDevolucoes({ pedidoVendaId, page, pageSize } = {}) {
-  return apiClient.get("/vendas/devolucoes", { pedidoVendaId, page, pageSize });
+export function listDevolucoes({ pedidoVendaId, dataInicial, dataFinal, page, pageSize } = {}) {
+  return apiClient.get("/vendas/devolucoes", { pedidoVendaId, dataInicial, dataFinal, page, pageSize });
 }
 
 export function createDevolucao(data) {
@@ -64,10 +64,102 @@ export function createOcorrencia(data) {
   return apiClient.post("/vendas/ocorrencias", data);
 }
 
-export function consultarItinerario({ data, turno, rotaEntregaId }) {
-  return apiClient.get("/vendas/itinerario", { data, turno, rotaEntregaId });
-}
-
 export function listRotasEntrega({ page, pageSize } = {}) {
   return apiClient.get("/participantes/rotas-entrega", { page, pageSize });
+}
+
+export function listTransportadoras({ page, pageSize } = {}) {
+  return apiClient.get("/participantes/transportadoras", { page, pageSize });
+}
+
+export function listColaboradores({ tipo, page, pageSize } = {}) {
+  return apiClient.get("/participantes/colaboradores", { tipo, page, pageSize });
+}
+
+// --- Terminal de Separadores (kanban) ---
+
+export function kanbanSeparadores({ separadorId, dataInicial, dataFinal } = {}) {
+  return apiClient.get("/vendas/separadores/kanban", { separadorId, dataInicial, dataFinal });
+}
+
+export function separarPedidoVenda(id, separadorId) {
+  return apiClient.post(`/vendas/pedidos/${id}/separar`, { separadorId });
+}
+
+// --- Consulta de Itens / Listagem para Compra / Controle de Produção / Terminal de Preços ---
+// As 4 telas usam o mesmo endpoint com combinações diferentes de filtro —
+// ver seção 15 do MAPEAMENTO_VENDAS_SPACESOFT.md.
+
+export function listItensVenda(filtros = {}) {
+  return apiClient.get("/vendas/itens", filtros);
+}
+
+export function totaisItensVenda(filtros = {}) {
+  return apiClient.get("/vendas/itens/totais", filtros);
+}
+
+export function marcarItemImpresso(id, impresso) {
+  return apiClient.patch(`/vendas/itens/${id}/impresso`, { impresso });
+}
+
+// --- Ocorrências ---
+
+export function opcoesOcorrencia() {
+  return apiClient.get("/vendas/ocorrencias/opcoes");
+}
+
+// --- Itinerário (entidade persistida) ---
+
+export function consultarItinerarios(filtros = {}) {
+  return apiClient.get("/vendas/itinerario", filtros);
+}
+
+export function getItinerario(id) {
+  return apiClient.get(`/vendas/itinerario/${id}`);
+}
+
+export function criarItinerario(data) {
+  return apiClient.post("/vendas/itinerario", data);
+}
+
+export function gerarAutomaticoItinerario(data) {
+  return apiClient.post("/vendas/itinerario/gerar-automatico", data);
+}
+
+export function vincularPedidoItinerario(id, pedidoId) {
+  return apiClient.patch(`/vendas/itinerario/${id}/pedidos`, { pedidoId });
+}
+
+export function atualizarItinerario(id, data) {
+  return apiClient.patch(`/vendas/itinerario/${id}`, data);
+}
+
+export function gerarFaturaItinerario(itinerarioIds) {
+  return apiClient.post("/vendas/itinerario/gerar-fatura", { itinerarioIds });
+}
+
+// --- Ações do Terminal de Venda / Consulta de Pedidos (seção 16 do mapeamento) ---
+
+export function aplicarDescontoPedidoVenda(id, desconto) {
+  return apiClient.patch(`/vendas/pedidos/${id}/desconto`, { desconto });
+}
+
+export function dividirPedidoVenda(id, itemIds) {
+  return apiClient.post(`/vendas/pedidos/${id}/dividir`, { itemIds });
+}
+
+export function agruparNfPedidosVenda(data) {
+  return apiClient.post("/vendas/pedidos/agrupar-nf", data);
+}
+
+export function atribuirItinerarioPedido(id, data) {
+  return apiClient.patch(`/vendas/pedidos/${id}/itinerario`, data);
+}
+
+export function atualizarVendedorPedidoVenda(id, vendedorId) {
+  return apiClient.patch(`/vendas/pedidos/${id}/vendedor`, { vendedorId });
+}
+
+export function atualizarClientePedidoVenda(id, clienteId) {
+  return apiClient.patch(`/vendas/pedidos/${id}/cliente`, { clienteId });
 }

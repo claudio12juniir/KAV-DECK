@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { FiDollarSign, FiHome, FiPackage, FiShoppingCart, FiTruck } from "react-icons/fi";
-import { MemoryRouter } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { CardNavMenu } from "../effects/CardNavMenu.jsx";
 import { Dock } from "../effects/Dock.jsx";
 import { useAuth } from "../../contexts/AuthContext.jsx";
-import { TabsProvider, useTabs } from "../../contexts/TabsContext.jsx";
 import { WorkspaceRoutes } from "../../routes/WorkspaceRoutes.jsx";
-import { TabsSidebar } from "./TabsSidebar.jsx";
 import "./AppShell.css";
 
 const NAV_GROUPS = [
@@ -14,9 +12,14 @@ const NAV_GROUPS = [
   {
     label: "Vendas",
     items: [
-      { to: "/vendas", label: "Pedidos" },
-      { to: "/vendas/devolucoes", label: "Devolução de vendas" },
-      { to: "/vendas/ocorrencias", label: "Ocorrências" },
+      { to: "/vendas/controle-producao", label: "Controle de Produção" },
+      { to: "/vendas/consulta-itens", label: "Consulta de Itens" },
+      { to: "/vendas/lista-compra", label: "Listagem para Compra" },
+      { to: "/vendas", label: "Terminal de Vendas" },
+      { to: "/vendas/terminal-precos", label: "Terminal de Preços" },
+      { to: "/vendas/devolucoes", label: "Devolução de Venda" },
+      { to: "/vendas/separadores", label: "Terminal de Separadores" },
+      { to: "/vendas/ocorrencias", label: "Ocorrência" },
       { to: "/vendas/itinerario", label: "Itinerário" },
     ],
   },
@@ -105,10 +108,15 @@ function toMobileGroups(navGroups) {
   return [...geral, ...agrupados];
 }
 
+function ehAtivo(pathAtual, to, end) {
+  if (end) return pathAtual === to;
+  return pathAtual === to || pathAtual.startsWith(`${to}/`);
+}
+
 // group.to (item de nível único, ex: "Início") ou group.items (dropdown)
-// sempre abrem/focam uma aba em vez de navegar a URL real — ver
-// TabsContext.jsx pro porquê.
-function NavGroup({ group, abaAtivaPath, onAbrirAba }) {
+// navegam pra URL real via useNavigate — cada clique troca a página como em
+// qualquer app com rota endereçável (ver App.jsx).
+function NavGroup({ group, pathAtual, onNavegar }) {
   const [aberto, setAberto] = useState(false);
   const ref = useRef(null);
 
@@ -125,8 +133,8 @@ function NavGroup({ group, abaAtivaPath, onAbrirAba }) {
     return (
       <button
         type="button"
-        className={`app-nav-link ${abaAtivaPath === group.to ? "is-active" : ""}`}
-        onClick={() => onAbrirAba(group.to, group.label)}
+        className={`app-nav-link ${ehAtivo(pathAtual, group.to, group.end) ? "is-active" : ""}`}
+        onClick={() => onNavegar(group.to)}
       >
         {group.label}
       </button>
@@ -149,10 +157,10 @@ function NavGroup({ group, abaAtivaPath, onAbrirAba }) {
             <button
               type="button"
               key={item.to}
-              className={`app-nav-dropdown-link ${abaAtivaPath === item.to ? "is-active" : ""}`}
+              className={`app-nav-dropdown-link ${ehAtivo(pathAtual, item.to, item.end) ? "is-active" : ""}`}
               onClick={() => {
                 setAberto(false);
-                onAbrirAba(item.to, item.label);
+                onNavegar(item.to);
               }}
             >
               {item.label}
@@ -164,9 +172,10 @@ function NavGroup({ group, abaAtivaPath, onAbrirAba }) {
   );
 }
 
-function AppShellConteudo() {
+export function AppShell() {
   const { me, signOut } = useAuth();
-  const { tabs, activeTabId, openTab } = useTabs();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
 
   const navGroups = PAPEIS_COM_ACESSO_SISTEMA.includes(me?.role)
@@ -192,14 +201,12 @@ function AppShellConteudo() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const abaAtiva = tabs.find((t) => t.id === activeTabId);
-
   const dockItems = [
-    { label: "Início", icon: <FiHome />, onClick: () => openTab("/", "Início") },
-    { label: "Novo pedido de venda", icon: <FiShoppingCart />, onClick: () => openTab("/vendas/novo", "Novo pedido de venda") },
-    { label: "Novo pedido de compra", icon: <FiTruck />, onClick: () => openTab("/compras/novo", "Novo pedido de compra") },
-    { label: "Estoque", icon: <FiPackage />, onClick: () => openTab("/estoque", "Estoque") },
-    { label: "Títulos", icon: <FiDollarSign />, onClick: () => openTab("/financeiro/titulos", "Títulos") },
+    { label: "Início", icon: <FiHome />, onClick: () => navigate("/") },
+    { label: "Novo pedido de venda", icon: <FiShoppingCart />, onClick: () => navigate("/vendas/novo") },
+    { label: "Novo pedido de compra", icon: <FiTruck />, onClick: () => navigate("/compras/novo") },
+    { label: "Estoque", icon: <FiPackage />, onClick: () => navigate("/estoque") },
+    { label: "Títulos", icon: <FiDollarSign />, onClick: () => navigate("/financeiro/titulos") },
   ];
 
   return (
@@ -212,7 +219,7 @@ function AppShellConteudo() {
 
           <nav className="app-nav">
             {navGroups.map((group) => (
-              <NavGroup key={group.label} group={group} abaAtivaPath={abaAtiva?.path} onAbrirAba={openTab} />
+              <NavGroup key={group.label} group={group} pathAtual={location.pathname} onNavegar={navigate} />
             ))}
           </nav>
 
@@ -225,35 +232,13 @@ function AppShellConteudo() {
         </div>
       </header>
 
-      <CardNavMenu groups={toMobileGroups(navGroups)} onAbrirAba={openTab} />
+      <CardNavMenu groups={toMobileGroups(navGroups)} onNavegar={navigate} />
 
-      <div className="app-body">
-        <TabsSidebar />
-
-        <main className="app-content container">
-          {/* Cada aba tem seu próprio <MemoryRouter> — todas ficam montadas o
-              tempo todo (só a ativa fica visível), por isso trocar de aba
-              preserva formulário, scroll, dado já carregado etc. sem
-              recarregar nada. */}
-          {tabs.map((tab) => (
-            <div key={tab.id} style={{ display: tab.id === activeTabId ? "block" : "none" }}>
-              <MemoryRouter initialEntries={[tab.path]}>
-                <WorkspaceRoutes />
-              </MemoryRouter>
-            </div>
-          ))}
-        </main>
-      </div>
+      <main className="app-content container">
+        <WorkspaceRoutes />
+      </main>
 
       <Dock items={dockItems} />
     </div>
-  );
-}
-
-export function AppShell() {
-  return (
-    <TabsProvider tabInicial={{ path: "/", label: "Início" }}>
-      <AppShellConteudo />
-    </TabsProvider>
   );
 }

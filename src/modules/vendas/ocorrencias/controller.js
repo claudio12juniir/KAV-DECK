@@ -25,3 +25,8 @@ export const create = asyncHandler(async (req, res) => {
   const ocorrencia = await service.create({ empresaId: req.user.empresaId, data: req.body });
   res.status(201).json(ocorrencia);
 });
+
+export const listarOpcoes = asyncHandler(async (req, res) => {
+  const opcoes = await service.listarOpcoes({ empresaId: req.user.empresaId });
+  res.json(opcoes);
+});

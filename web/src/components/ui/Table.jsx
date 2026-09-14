@@ -25,7 +25,7 @@ export function DataTable({ columns, rows, onRowClick, loading = false, emptyMes
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <tr
               key={row.id}
               className={onRowClick ? "clickable" : ""}
@@ -33,7 +33,7 @@ export function DataTable({ columns, rows, onRowClick, loading = false, emptyMes
             >
               {columns.map((col) => (
                 <td key={col.key} data-label={col.label}>
-                  {col.render ? col.render(row) : row[col.key]}
+                  {col.render ? col.render(row, index) : row[col.key]}
                 </td>
               ))}
             </tr>
