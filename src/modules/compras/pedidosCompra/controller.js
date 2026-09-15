@@ -80,8 +80,11 @@ export const listarItens = asyncHandler(async (req, res) => {
     skip,
     take,
     produtoId: req.query.produtoId,
+    produto: req.query.produto,
+    fornecedorId: req.query.fornecedorId,
     dataInicial: req.query.dataInicial,
     dataFinal: req.query.dataFinal,
+    valorZero: req.query.valorZero,
   });
   res.json(buildPaginatedResult({ items, total, page, pageSize }));
 });

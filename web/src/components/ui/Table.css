@@ -11,14 +11,18 @@
   border-collapse: collapse;
 }
 
+/* Peso/contraste do cabeçalho copiado das grids densas do Space Soft
+   (bold, quase preto) — no KAV original era um rótulo discreto (cinza
+   claro); aqui só a cor/peso do texto continuam vindo dos tokens da marca. */
 .data-table th {
   text-align: left;
   font-size: var(--text-xs);
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-text-faint);
+  color: var(--color-text);
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border-strong);
 }
 
 .data-table td {

@@ -35,3 +35,11 @@ export function baixarTitulo(id, { valorBaixado, formaBaixa, dataBaixa }) {
 export function cancelarTitulo(id) {
   return apiClient.patch(`/financeiro/titulos/${id}/cancelar`);
 }
+
+export function baixarLoteTitulos(baixas) {
+  return apiClient.post("/financeiro/titulos/baixar-lote", { baixas });
+}
+
+export function agruparTitulos(tituloIds, vencimento) {
+  return apiClient.post("/financeiro/titulos/agrupar", { tituloIds, vencimento });
+}

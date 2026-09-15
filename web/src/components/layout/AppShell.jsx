@@ -23,18 +23,33 @@ const NAV_GROUPS = [
       { to: "/vendas/itinerario", label: "Itinerário" },
     ],
   },
-  { label: "Compras", to: "/compras" },
+  {
+    label: "Compras",
+    // Ordem e nomes copiados 1:1 do menu de referência (gravação Desktop
+    // 2026-09-15 16:15) — "Terminal de Compras" continua apontando pra
+    // consulta de pedidos (mesmo padrão do "Terminal de Vendas").
+    items: [
+      { to: "/compras/consulta-itens", label: "Consulta de Itens" },
+      { to: "/compras", label: "Terminal de Compras" },
+      { to: "/compras/terminal-precos", label: "Terminal de Preços" },
+      { to: "/compras/frete-descarga", label: "Controle de Frete / Descarga" },
+    ],
+  },
   {
     label: "Estoque",
+    // Ordem e nomes copiados 1:1 do menu de referência (ver
+    // MAPEAMENTO_ESTOQUE_SPACESOFT.md seção 0) — "Controle de Estoque" é o
+    // kardex por produto, "Controle de Estoque por Lote" é a consulta por
+    // lote (raiz /estoque, era só "Lotes").
     items: [
-      { to: "/estoque", label: "Lotes" },
-      { to: "/estoque/movimentos", label: "Movimentos" },
+      { to: "/estoque/movimentos", label: "Controle de Estoque" },
+      { to: "/estoque", label: "Controle de Estoque por Lote" },
+      { to: "/estoque/inventarios", label: "Inventário Físico" },
+      { to: "/estoque/previa", label: "Prévia do Estoque" },
+      { to: "/estoque/faturado", label: "Estoque Faturado" },
+      { to: "/estoque/caixas-embalagem", label: "Estoque de Caixas" },
+      { to: "/estoque/recebimento", label: "Terminal de Recebimento" },
       { to: "/estoque/rastreabilidade", label: "Rastreabilidade" },
-      { to: "/estoque/recebimento", label: "Terminal de recebimento" },
-      { to: "/estoque/faturado", label: "Estoque faturado" },
-      { to: "/estoque/previa", label: "Prévia de estoque" },
-      { to: "/estoque/inventarios", label: "Inventários" },
-      { to: "/estoque/caixas-embalagem", label: "Caixas de embalagem" },
     ],
   },
   {
@@ -69,7 +84,9 @@ const NAV_GROUPS = [
     label: "Financeiro",
     items: [
       { to: "/financeiro/titulos/receber", label: "Contas a receber" },
-      { to: "/financeiro/titulos/pagar", label: "Contas a pagar" },
+      { to: "/financeiro/titulos/pagar", label: "Títulos a Pagar" },
+      { to: "/financeiro/titulos/baixa", label: "Baixa de Títulos" },
+      { to: "/compras/fatura-produtor", label: "Fatura de Produtor" },
       { to: "/financeiro/titulos", label: "Todos os títulos" },
       { to: "/financeiro/caixa", label: "Caixa" },
       { to: "/financeiro/contas-bancarias", label: "Contas bancárias" },

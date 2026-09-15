@@ -40,8 +40,11 @@ export const listarItensQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   pageSize: z.coerce.number().int().positive().optional(),
   produtoId: z.string().uuid().optional(),
+  produto: z.string().trim().min(1).optional(),
+  fornecedorId: z.string().uuid().optional(),
   dataInicial: z.coerce.date().optional(),
   dataFinal: z.coerce.date().optional(),
+  valorZero: z.coerce.boolean().optional(),
 });
 
 export const favoritosQuerySchema = z.object({

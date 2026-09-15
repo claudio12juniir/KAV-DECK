@@ -248,7 +248,7 @@ export function OcorrenciasPage() {
 
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
         <strong>Ocorrências ({ocorrencias.length ? 1 : 0} - {ocorrencias.length})</strong>
-        <button type="button" className="autocomplete-trocar" title="Atualizar" onClick={() => setRefreshKey((k) => k + 1)}>
+        <button type="button" className="icon-btn" title="Atualizar" onClick={() => setRefreshKey((k) => k + 1)}>
           <FiRefreshCw />
         </button>
       </div>

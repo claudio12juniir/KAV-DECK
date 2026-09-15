@@ -28,6 +28,8 @@ const SELECT_HEADER = {
   criadoEm: true,
   atualizadoEm: true,
   fornecedor: { select: { participante: { select: { razaoSocial: true, cpfCnpj: true } } } },
+  comprador: { select: { nome: true } },
+  transportadora: { select: { razaoSocial: true } },
 };
 
 const SELECT_DETAIL = {
@@ -368,22 +370,25 @@ export async function estornarLote({ empresaId, pedidoIds }) {
 // "Consulta de Itens" do balcão de compras: visão por item entre pedidos,
 // não por pedido — útil pra achar rápido "quanto compramos desse produto
 // nesse período", sem abrir pedido por pedido.
-export async function listarItens({ empresaId, skip, take, produtoId, dataInicial, dataFinal }) {
+export async function listarItens({ empresaId, skip, take, produtoId, produto: nomeProduto, fornecedorId, dataInicial, dataFinal, valorZero }) {
   const where = {
     pedidoCompra: {
       empresaId,
+      ...(fornecedorId ? { fornecedorId } : {}),
       ...(dataInicial || dataFinal
         ? { dataEmissao: { ...(dataInicial ? { gte: dataInicial } : {}), ...(dataFinal ? { lte: dataFinal } : {}) } }
         : {}),
     },
     ...(produtoId ? { produtoId } : {}),
+    ...(nomeProduto ? { produto: { descricao: { contains: nomeProduto, mode: "insensitive" } } } : {}),
+    ...(valorZero ? { precoUnitario: 0 } : {}),
   };
   const select = {
     id: true,
     produtoId: true,
     quantidade: true,
     precoUnitario: true,
-    produto: { select: { codigo: true, descricao: true } },
+    produto: { select: { codigo: true, descricao: true, unidadeMedida: { select: { sigla: true } } } },
     pedidoCompra: {
       select: {
         id: true,

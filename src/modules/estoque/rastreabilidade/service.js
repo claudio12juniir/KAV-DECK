@@ -71,11 +71,19 @@ export async function lotes({ empresaId, skip, take, produtoId }) {
     quantidadeAtual: true,
     produto: { select: { codigo: true, descricao: true } },
     fornecedor: { select: { participante: { select: { razaoSocial: true } } } },
+    // Mesmo truque do recebimento/service.js: pega o pedido de compra de
+    // origem pela primeira ENTRADA registrada pra este lote, sem precisar
+    // duplicar essa referência no próprio Lote.
+    movimentosEstoque: { where: { tipo: "ENTRADA" }, select: { pedidoCompraId: true }, take: 1 },
   };
-  const [items, total] = await Promise.all([
+  const [itemsBrutos, total] = await Promise.all([
     prisma.lote.findMany({ where, select, skip, take, orderBy: { dataRecebimento: "desc" } }),
     prisma.lote.count({ where }),
   ]);
+  const items = itemsBrutos.map(({ movimentosEstoque, ...lote }) => ({
+    ...lote,
+    pedidoCompraId: movimentosEstoque[0]?.pedidoCompraId ?? null,
+  }));
   return { items, total };
 }
 

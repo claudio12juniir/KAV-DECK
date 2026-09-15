@@ -20,6 +20,7 @@ import {
   atribuirItinerarioPedido,
   atualizarClientePedidoVenda,
   atualizarVendedorPedidoVenda,
+  createPedidoVenda,
   dividirPedidoVenda,
   duplicarPedidoVenda,
   getPedidoVenda,
@@ -62,6 +63,16 @@ export function PedidoVendaDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  // "novo" reproduz o estado "em branco" do Terminal de Venda de referência
+  // (mesma tela, :id = 0 — seção 2 do MAPEAMENTO_VENDAS_SPACESOFT.md): sem
+  // pedido persistido ainda, cabeçalho mostra "Selecionar cliente" no lugar
+  // do nome do cliente, e a grid de itens fica bloqueada até o pedido
+  // existir de verdade. O backend exige clienteId pra criar um pedido
+  // (schema.js: createPedidoVendaSchema não tem clienteId opcional), então
+  // aqui o pedido só é criado de fato no back quando o usuário escolhe o
+  // cliente (handleTrocarCliente) — depois disso, esta mesma tela reabre
+  // pela URL /vendas/:id normal e passa a funcionar como qualquer pedido.
+  const modoCriacao = id === "novo";
   const [pedido, setPedido] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erroCarregar, setErroCarregar] = useState("");
@@ -115,6 +126,12 @@ export function PedidoVendaDetailPage() {
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   async function carregar() {
+    if (modoCriacao) {
+      setPedido(null);
+      setErroCarregar("");
+      setCarregando(false);
+      return;
+    }
     setCarregando(true);
     setErroCarregar("");
     try {
@@ -217,13 +234,21 @@ export function PedidoVendaDetailPage() {
     if (!clienteNovo) return;
     setTrocandoCliente(true);
     try {
+      if (modoCriacao) {
+        const pedidoNovo = await createPedidoVenda({ clienteId: clienteNovo.participanteId });
+        toast.success("Pedido criado — agora é só adicionar os itens.");
+        setModalClienteAberto(false);
+        setClienteNovo(null);
+        navigate(`/vendas/${pedidoNovo.id}`, { replace: true });
+        return;
+      }
       await atualizarClientePedidoVenda(id, clienteNovo.participanteId);
       toast.success("Cliente do pedido atualizado.");
       setModalClienteAberto(false);
       setClienteNovo(null);
       await carregar();
     } catch (err) {
-      toast.error(err.message ?? "Não foi possível trocar o cliente.");
+      toast.error(err.message ?? "Não foi possível salvar o cliente.");
     } finally {
       setTrocandoCliente(false);
     }
@@ -283,12 +308,12 @@ export function PedidoVendaDetailPage() {
     );
   }
 
-  if (!pedido) return null;
+  if (!pedido && !modoCriacao) return null;
 
-  const podeConfirmarSeparacao = pedido.status === "ABERTO";
-  const podeCancelar = pedido.status === "ABERTO" || pedido.status === "SEPARACAO";
-  const podeFaturar = pedido.status === "SEPARACAO";
-  const podeEditarItens = pedido.status === "ABERTO";
+  const podeConfirmarSeparacao = pedido?.status === "ABERTO";
+  const podeCancelar = pedido?.status === "ABERTO" || pedido?.status === "SEPARACAO";
+  const podeFaturar = pedido?.status === "SEPARACAO";
+  const podeEditarItens = pedido?.status === "ABERTO";
 
   async function handleAdicionarItem() {
     if (!produtoNovo) return;
@@ -407,12 +432,13 @@ export function PedidoVendaDetailPage() {
     }
   }
 
-  const valorProdutos = pedido.itens.reduce((soma, item) => soma + Number(item.quantidade) * Number(item.precoUnitario), 0);
-  const valorDesconto = pedido.itens.reduce((soma, item) => soma + Number(item.desconto || 0), 0);
+  const itensPedido = pedido?.itens ?? [];
+  const valorProdutos = itensPedido.reduce((soma, item) => soma + Number(item.quantidade) * Number(item.precoUnitario), 0);
+  const valorDesconto = itensPedido.reduce((soma, item) => soma + Number(item.desconto || 0), 0);
   const valorTotal = valorProdutos - valorDesconto;
 
   const itensOrdenados =
-    ordenacao === "produto" ? [...pedido.itens].sort((a, b) => a.produto.descricao.localeCompare(b.produto.descricao)) : pedido.itens;
+    ordenacao === "produto" ? [...itensPedido].sort((a, b) => a.produto.descricao.localeCompare(b.produto.descricao)) : itensPedido;
 
   const columns = [
     { key: "quantidade", label: "Qtd." },
@@ -465,11 +491,11 @@ export function PedidoVendaDetailPage() {
           <Link to="/vendas/novo">
             <Button variant="secondary">+ Novo</Button>
           </Link>
-          <Button variant="ghost" onClick={carregar}>
+          <Button variant="ghost" onClick={carregar} disabled={modoCriacao}>
             Atualizar
           </Button>
           <div style={{ position: "relative" }}>
-            <Button variant="ghost" onClick={() => setMostrarImprimir((v) => !v)}>
+            <Button variant="ghost" onClick={() => setMostrarImprimir((v) => !v)} disabled={modoCriacao}>
               Imprimir ▾
             </Button>
             {mostrarImprimir && (
@@ -480,14 +506,14 @@ export function PedidoVendaDetailPage() {
               />
             )}
           </div>
-          <Button variant="ghost" onClick={stub("Download")}>
+          <Button variant="ghost" onClick={stub("Download")} disabled={modoCriacao}>
             Download
           </Button>
           <div style={{ position: "relative" }}>
-            <Button variant="ghost" onClick={() => setMostrarOpcoes((v) => !v)}>
+            <Button variant="ghost" onClick={() => setMostrarOpcoes((v) => !v)} disabled={modoCriacao}>
               Opções ▾
             </Button>
-            {mostrarOpcoes && (
+            {mostrarOpcoes && pedido && (
               <DropdownMenu
                 items={["Importar pedidos", "Aplicar desconto", "Aplicar outras despesas", "Integração Filial", "Dividir", "Logs"]}
                 onSelect={(item) => {
@@ -505,15 +531,18 @@ export function PedidoVendaDetailPage() {
 
       {/* Duplicar/Arquivar não existem no menu Opções da referência (lá são
           ações da grid de consulta / não existem) — mantidos aqui como
-          utilitários secundários do KAV DECK, fora da barra copiada 1:1. */}
-      <div style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
-        <button type="button" className="autocomplete-trocar" onClick={handleDuplicar} disabled={duplicando}>
-          {duplicando ? "Duplicando..." : "Duplicar pedido"}
-        </button>
-        <button type="button" className="autocomplete-trocar" onClick={handleAlternarArquivamento} disabled={arquivando}>
-          {pedido.arquivado ? "Desarquivar" : "Arquivar"}
-        </button>
-      </div>
+          utilitários secundários do KAV DECK, fora da barra copiada 1:1.
+          Não fazem sentido em modoCriacao (nada pra duplicar/arquivar ainda). */}
+      {pedido && (
+        <div style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
+          <button type="button" className="autocomplete-trocar" onClick={handleDuplicar} disabled={duplicando}>
+            {duplicando ? "Duplicando..." : "Duplicar pedido"}
+          </button>
+          <button type="button" className="autocomplete-trocar" onClick={handleAlternarArquivamento} disabled={arquivando}>
+            {pedido.arquivado ? "Desarquivar" : "Arquivar"}
+          </button>
+        </div>
+      )}
 
       {/* Cabeçalho do quadro — ícones de Cliente/Editar/Confirmar, Emissão/
           Saída-Entrega, Vendedor/Separador (checklist do usuário) */}
@@ -522,19 +551,17 @@ export function PedidoVendaDetailPage() {
           <div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase" }}>Cliente</div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <button
-                type="button"
-                className="autocomplete-trocar"
-                title="Alterar cliente"
-                onClick={() => setModalClienteAberto(true)}
-                style={{ display: "flex", alignItems: "center", padding: "4px" }}
-              >
+              <button type="button" className="icon-btn" title="Alterar cliente" onClick={() => setModalClienteAberto(true)}>
                 <FiUser />
               </button>
-              <div>
-                <div style={{ fontWeight: 700 }}>{pedido.cliente.participante.razaoSocial}</div>
-                <div>{pedido.cliente.participante.cpfCnpj}</div>
-              </div>
+              {pedido ? (
+                <div>
+                  <div style={{ fontWeight: 700 }}>{pedido.cliente.participante.razaoSocial}</div>
+                  <div>{pedido.cliente.participante.cpfCnpj}</div>
+                </div>
+              ) : (
+                <div style={{ color: "var(--color-text-faint)" }}>Selecionar cliente</div>
+              )}
             </div>
             <a href="/participantes/clientes" target="_blank" rel="noreferrer" style={{ fontSize: "var(--text-xs)" }}>
               + Novo cliente
@@ -542,42 +569,46 @@ export function PedidoVendaDetailPage() {
           </div>
           <div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase" }}>Emissão</div>
-            <div>{formatarData(pedido.dataEmissao)}</div>
+            <div>{formatarData(pedido ? pedido.dataEmissao : new Date().toISOString())}</div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase", marginTop: "8px" }}>
               Saída / Entrega
             </div>
-            <div>{pedido.turno ? TURNO_LABEL[pedido.turno] ?? pedido.turno : "Não definido"}</div>
+            <div>{pedido?.turno ? TURNO_LABEL[pedido.turno] ?? pedido.turno : "Não definido"}</div>
           </div>
           <div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase" }}>Vendedor/Representante</div>
-            <div>{pedido.vendedor?.nome ?? "Não atribuído"}</div>
+            <div>{pedido?.vendedor?.nome ?? "Não atribuído"}</div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase", marginTop: "8px" }}>
               Separador
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>{pedido.separador?.nome ?? "Não atribuído"}</span>
-              <button type="button" className="autocomplete-trocar" onClick={handleTrocarSeparador}>
-                Trocar
-              </button>
+              <span>{pedido?.separador?.nome ?? "Não atribuído"}</span>
+              {pedido && (
+                <button type="button" className="autocomplete-trocar" onClick={handleTrocarSeparador}>
+                  Trocar
+                </button>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button type="button" className="autocomplete-trocar" title="Editar Pedido de Venda" onClick={abrirModalEditar}>
-                <FiEdit2 />
-              </button>
-              <button
-                type="button"
-                className="autocomplete-trocar"
-                title="Pedido pronto para separação"
-                disabled={!podeConfirmarSeparacao}
-                onClick={() => setConfirmarSeparacao(true)}
-                style={{ color: podeConfirmarSeparacao ? "var(--color-success)" : "var(--color-text-faint)" }}
-              >
-                <FiCheckCircle />
-              </button>
-            </div>
-            <StatusBadge status={pedido.status} />
+            {pedido && (
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button type="button" className="icon-btn" title="Editar Pedido de Venda" onClick={abrirModalEditar}>
+                  <FiEdit2 />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  title="Pedido pronto para separação"
+                  disabled={!podeConfirmarSeparacao}
+                  onClick={() => setConfirmarSeparacao(true)}
+                  style={{ color: podeConfirmarSeparacao ? "var(--color-success)" : undefined, borderColor: podeConfirmarSeparacao ? "var(--color-success)" : undefined }}
+                >
+                  <FiCheckCircle />
+                </button>
+              </div>
+            )}
+            {pedido && <StatusBadge status={pedido.status} />}
           </div>
         </div>
       </Card>
@@ -586,7 +617,7 @@ export function PedidoVendaDetailPage() {
           seções 2.3/3 do mapeamento e checklist do usuário */}
       <Card style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
-          <h3 style={{ margin: 0 }}>Itens ({pedido.itens.length})</h3>
+          <h3 style={{ margin: 0 }}>Itens ({itensPedido.length})</h3>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <Button variant={exibirEstoque ? "secondary" : "ghost"} onClick={() => setExibirEstoque((v) => !v)}>
               Exibir estoque
@@ -643,7 +674,11 @@ export function PedidoVendaDetailPage() {
           </div>
         </div>
 
-        <DataTable columns={columns} rows={itensOrdenados} emptyMessage="Pedido sem itens." />
+        {pedido ? (
+          <DataTable columns={columns} rows={itensOrdenados} emptyMessage="Pedido sem itens." />
+        ) : (
+          <p style={{ color: "var(--color-text-faint)" }}>Selecione um cliente acima para começar a adicionar itens.</p>
+        )}
 
         {mostrarAdicionarItem && podeEditarItens && (
           <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid var(--color-border)" }}>
@@ -701,7 +736,7 @@ export function PedidoVendaDetailPage() {
         </div>
       </Card>
 
-      {(podeFaturar || podeCancelar) && (
+      {pedido && (podeFaturar || podeCancelar) && (
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           {podeFaturar && (
             <Link to={`/vendas/${id}/faturar`}>
@@ -768,19 +803,19 @@ export function PedidoVendaDetailPage() {
           setModalClienteAberto(false);
           setClienteNovo(null);
         }}
-        title="Alterar Cliente"
+        title={modoCriacao ? "Selecionar Cliente" : "Alterar Cliente"}
         footer={
           <>
             <Button variant="ghost" onClick={() => setModalClienteAberto(false)}>
               Cancelar
             </Button>
             <Button onClick={handleTrocarCliente} loading={trocandoCliente} disabled={!clienteNovo}>
-              Confirmar
+              {modoCriacao ? "Criar pedido" : "Confirmar"}
             </Button>
           </>
         }
       >
-        {pedido.status !== "ABERTO" ? (
+        {!modoCriacao && pedido.status !== "ABERTO" ? (
           <p style={{ color: "var(--color-danger)" }}>Só é possível trocar o cliente enquanto o pedido está aberto.</p>
         ) : (
           <ClienteAutocomplete selecionado={clienteNovo} onSelecionar={setClienteNovo} onLimpar={() => setClienteNovo(null)} />
@@ -896,7 +931,7 @@ export function PedidoVendaDetailPage() {
         }
       >
         <p>Selecione os itens que devem sair deste pedido e formar um novo pedido em aberto:</p>
-        {pedido.itens.map((item) => (
+        {itensPedido.map((item) => (
           <label key={item.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 0" }}>
             <input type="checkbox" checked={itensParaDividir.has(item.id)} onChange={() => alternarItemDividir(item.id)} />
             {item.produto.descricao} — {item.quantidade}

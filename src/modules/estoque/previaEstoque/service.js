@@ -8,10 +8,21 @@ const PEDIDO_VENDA_PENDENTE = ["ABERTO", "SEPARACAO"];
 // vai entrar (pedidos de compra em aberto, descontando o que desses
 // pedidos já foi recebido), menos o que ainda vai sair (pedidos de venda
 // em aberto — que só decrementam o saldo real no faturamento).
-export async function consultar({ empresaId, produtoId }) {
+export async function consultar({ empresaId, produtoId, departamentoId, produto: nomeProduto, exibirSemMovimento }) {
   const filtroProduto = produtoId ? { produtoId } : {};
 
-  const [lotes, itensCompraPendente, entradasDeCompraPendente, itensVendaPendente] = await Promise.all([
+  const [produtosBase, lotes, itensCompraPendente, entradasDeCompraPendente, itensVendaPendente] = await Promise.all([
+    prisma.produto.findMany({
+      where: {
+        empresaId,
+        ativo: true,
+        ...(produtoId ? { id: produtoId } : {}),
+        ...(departamentoId ? { categoria: { departamentoId } } : {}),
+        ...(nomeProduto ? { descricao: { contains: nomeProduto, mode: "insensitive" } } : {}),
+      },
+      select: { id: true, codigo: true, descricao: true, unidadeMedida: { select: { sigla: true, fatorConversao: true } } },
+      orderBy: { descricao: "asc" },
+    }),
     prisma.lote.groupBy({
       by: ["produtoId"],
       where: { empresaId, ...filtroProduto },
@@ -39,22 +50,17 @@ export async function consultar({ empresaId, produtoId }) {
     }),
   ]);
 
-  const produtoIds = new Set([
+  const produtoIdsComMovimento = new Set([
     ...lotes.map((l) => l.produtoId),
     ...itensCompraPendente.map((i) => i.produtoId),
     ...itensVendaPendente.map((i) => i.produtoId),
   ]);
-  if (!produtoIds.size) return [];
 
-  const produtos = await prisma.produto.findMany({
-    where: { id: { in: [...produtoIds] } },
-    select: {
-      id: true,
-      codigo: true,
-      descricao: true,
-      unidadeMedida: { select: { sigla: true, fatorConversao: true } },
-    },
-  });
+  // Por padrão só lista produto com algum movimento (igual ao original) —
+  // "exibirSemMovimento" (toggle da referência) inclui todo produto ativo
+  // do filtro, mesmo saldo/compra/venda zerados nos três.
+  const produtos = exibirSemMovimento ? produtosBase : produtosBase.filter((p) => produtoIdsComMovimento.has(p.id));
+  if (!produtos.length) return [];
 
   const mapaSaldo = new Map(lotes.map((l) => [l.produtoId, l._sum.quantidadeAtual]));
   const mapaPedidoCompra = new Map(itensCompraPendente.map((i) => [i.produtoId, i._sum.quantidade]));

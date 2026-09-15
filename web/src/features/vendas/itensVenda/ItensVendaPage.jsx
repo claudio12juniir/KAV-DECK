@@ -236,6 +236,135 @@ export function ItensVendaPage({ variante, titulo, descricao }) {
   const rotuloContador = { consulta: "Itens Vendidos", listaCompra: "Pedidos", terminalPrecos: "Itens" }[variante];
   const rangeAte = Math.min(total, itens.length);
 
+  // Consulta de Itens é a única das 4 variantes cuja referência usa barra
+  // lateral de filtros (ver captura "Controle de Itens de Venda" em
+  // Downloads/kav deck vendas) — as outras 3 usam filtro horizontal no topo
+  // (Controle de Produção, Listagem para Compra, Terminal de Preços).
+  const comSidebarFiltros = variante === "consulta";
+
+  const camposFiltro = (
+    <>
+      {diaUnico ? (
+        <Input label="Data emissão" type="date" value={dataUnica} onChange={(e) => setDataUnica(e.target.value)} />
+      ) : (
+        <>
+          <Input label="Data inicial" type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} />
+          <Input label="Data final" type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} />
+        </>
+      )}
+      {comClienteProduto && (
+        <>
+          <Input label="Cliente" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Buscar por nome..." />
+          {comPeriodo && (
+            <Select label="Período da entrega" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+              <option value="">Todos</option>
+              {Object.entries(TURNO_LABEL).map(([valor, label]) => (
+                <option key={valor} value={valor}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          )}
+          <Input label="Produto" value={produto} onChange={(e) => setProduto(e.target.value)} placeholder="Buscar por descrição..." />
+          {comCategoria && (
+            <Select label="Categoria" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
+              <option value="">Todas</option>
+              {categorias.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+          )}
+          {comDepartamento && (
+            <Select label="Departamento" value={departamentoId} onChange={(e) => setDepartamentoId(e.target.value)}>
+              <option value="">Todos</option>
+              {departamentos.map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </>
+      )}
+      {comImpresso && (
+        <Select label="Impresso" value={impresso === undefined ? "" : String(impresso)} onChange={(e) => setImpresso(e.target.value === "" ? undefined : e.target.value === "true")}>
+          <option value="false">Não impresso</option>
+          <option value="true">Impresso</option>
+          <option value="">Todos</option>
+        </Select>
+      )}
+      {comValorZero && (
+        <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <input type="checkbox" checked={valorZero} onChange={(e) => setValorZero(e.target.checked)} />
+          Valor igual a 0
+        </label>
+      )}
+    </>
+  );
+
+  const avisoValorZero = comValorZero && valorZero && (
+    <div style={{ marginBottom: "16px" }}>
+      <Badge tone="warning">Mostrando só itens vendidos por R$ 0,00 — confira se são bonificações antes de considerar erro.</Badge>
+    </div>
+  );
+
+  const linhaContador = !diaUnico && (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <strong>
+          {rotuloContador} ({itens.length ? 1 : 0} - {rangeAte})
+        </strong>
+        <button type="button" className="icon-btn" title="Atualizar" onClick={() => setRefreshKey((k) => k + 1)}>
+          <FiRefreshCw />
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        {variante === "listaCompra" && (
+          <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <input type="checkbox" checked={exibirTotais} onChange={(e) => setExibirTotais(e.target.checked)} />
+            Exibir totais
+          </label>
+        )}
+        {variante === "listaCompra" && (
+          <div style={{ position: "relative" }}>
+            <Button variant="ghost" onClick={() => setMostrarOpcoes((v) => !v)}>
+              Opções ▾
+            </Button>
+            {mostrarOpcoes && <DropdownMenu items={["Formatar Qtd"]} onSelect={stub("Essa opção")} onClose={() => setMostrarOpcoes(false)} />}
+          </div>
+        )}
+        {variante === "terminalPrecos" && (
+          <div style={{ position: "relative" }}>
+            <Button variant="ghost" onClick={() => setMostrarOrdenar((v) => !v)}>
+              ↕ ▾
+            </Button>
+            {mostrarOrdenar && (
+              <DropdownMenu
+                items={["Ordenar por lançamento", "Ordenar por produto"]}
+                onSelect={(item) => {
+                  setOrdenacao(item === "Ordenar por produto" ? "produto" : "lancamento");
+                  setMostrarOrdenar(false);
+                }}
+                onClose={() => setMostrarOrdenar(false)}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const tabela = (
+    <DataTable
+      columns={exibirTotais && !diaUnico ? colunasTotais : colunasDetalhe}
+      rows={exibirTotais && !diaUnico ? linhasTotais : itensExibidos}
+      loading={carregando}
+      emptyMessage="Nenhum item encontrado para este filtro."
+    />
+  );
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
@@ -277,126 +406,28 @@ export function ItensVendaPage({ variante, titulo, descricao }) {
         </div>
       </div>
 
-      <Card style={{ marginBottom: "24px" }}>
-        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
-          {diaUnico ? (
-            <Input label="Data emissão" type="date" value={dataUnica} onChange={(e) => setDataUnica(e.target.value)} />
-          ) : (
-            <>
-              <Input label="Data inicial" type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} />
-              <Input label="Data final" type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} />
-            </>
-          )}
-          {comClienteProduto && (
-            <>
-              <Input label="Cliente" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Buscar por nome..." />
-              {comPeriodo && (
-                <Select label="Período da entrega" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-                  <option value="">Todos</option>
-                  {Object.entries(TURNO_LABEL).map(([valor, label]) => (
-                    <option key={valor} value={valor}>
-                      {label}
-                    </option>
-                  ))}
-                </Select>
-              )}
-              <Input label="Produto" value={produto} onChange={(e) => setProduto(e.target.value)} placeholder="Buscar por descrição..." />
-              {comCategoria && (
-                <Select label="Categoria" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
-                  <option value="">Todas</option>
-                  {categorias.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </Select>
-              )}
-              {comDepartamento && (
-                <Select label="Departamento" value={departamentoId} onChange={(e) => setDepartamentoId(e.target.value)}>
-                  <option value="">Todos</option>
-                  {departamentos.map((d) => (
-                    <option key={d.value} value={d.value}>
-                      {d.label}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </>
-          )}
-          {comImpresso && (
-            <Select label="Impresso" value={impresso === undefined ? "" : String(impresso)} onChange={(e) => setImpresso(e.target.value === "" ? undefined : e.target.value === "true")}>
-              <option value="false">Não impresso</option>
-              <option value="true">Impresso</option>
-              <option value="">Todos</option>
-            </Select>
-          )}
-          {comValorZero && (
-            <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <input type="checkbox" checked={valorZero} onChange={(e) => setValorZero(e.target.checked)} />
-              Valor igual a 0
-            </label>
-          )}
-        </div>
-      </Card>
-
-      {comValorZero && valorZero && (
-        <div style={{ marginBottom: "16px" }}>
-          <Badge tone="warning">Mostrando só itens vendidos por R$ 0,00 — confira se são bonificações antes de considerar erro.</Badge>
-        </div>
-      )}
-
-      {!diaUnico && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <strong>
-              {rotuloContador} ({itens.length ? 1 : 0} - {rangeAte})
-            </strong>
-            <button type="button" className="autocomplete-trocar" title="Atualizar" onClick={() => setRefreshKey((k) => k + 1)}>
-              <FiRefreshCw />
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {variante === "listaCompra" && (
-              <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <input type="checkbox" checked={exibirTotais} onChange={(e) => setExibirTotais(e.target.checked)} />
-                Exibir totais
-              </label>
-            )}
-            {variante === "listaCompra" && (
-              <div style={{ position: "relative" }}>
-                <Button variant="ghost" onClick={() => setMostrarOpcoes((v) => !v)}>
-                  Opções ▾
-                </Button>
-                {mostrarOpcoes && <DropdownMenu items={["Formatar Qtd"]} onSelect={stub("Essa opção")} onClose={() => setMostrarOpcoes(false)} />}
-              </div>
-            )}
-            {variante === "terminalPrecos" && (
-              <div style={{ position: "relative" }}>
-                <Button variant="ghost" onClick={() => setMostrarOrdenar((v) => !v)}>
-                  ↕ ▾
-                </Button>
-                {mostrarOrdenar && (
-                  <DropdownMenu
-                    items={["Ordenar por lançamento", "Ordenar por produto"]}
-                    onSelect={(item) => {
-                      setOrdenacao(item === "Ordenar por produto" ? "produto" : "lancamento");
-                      setMostrarOrdenar(false);
-                    }}
-                    onClose={() => setMostrarOrdenar(false)}
-                  />
-                )}
-              </div>
-            )}
+      {comSidebarFiltros ? (
+        <div style={{ display: "flex", gap: "24px", alignItems: "flex-start" }}>
+          <Card style={{ width: "280px", flexShrink: 0 }}>
+            <h3 style={{ marginTop: 0 }}>Filtros</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>{camposFiltro}</div>
+          </Card>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {avisoValorZero}
+            {linhaContador}
+            {tabela}
           </div>
         </div>
+      ) : (
+        <>
+          <Card style={{ marginBottom: "24px" }}>
+            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>{camposFiltro}</div>
+          </Card>
+          {avisoValorZero}
+          {linhaContador}
+          {tabela}
+        </>
       )}
-
-      <DataTable
-        columns={exibirTotais && !diaUnico ? colunasTotais : colunasDetalhe}
-        rows={exibirTotais && !diaUnico ? linhasTotais : itensExibidos}
-        loading={carregando}
-        emptyMessage="Nenhum item encontrado para este filtro."
-      />
     </div>
   );
 }

@@ -1,8 +1,18 @@
+/* Sem "width: 100%" nem "flex-basis" fixo de propósito: "width: 100%" vira
+   flex-basis 100% dentro de um container flex em LINHA (barra de filtros
+   horizontal) e empilha cada campo sozinho — o oposto do "lado a lado" da
+   referência Space Soft. Um flex-basis fixo em px tem o problema inverso
+   num container flex em COLUNA (barra lateral de filtro): o eixo principal
+   vira altura, então "200px" força cada campo a ter 200px de ALTURA,
+   abrindo vãos enormes. Deixando width/flex no valor inicial (auto): em
+   linha, cada campo fica do tamanho natural do input e senta ao lado do
+   próximo; em coluna, estica pra largura total via "align-items: stretch"
+   (comportamento padrão do flexbox pro eixo cruzado). */
 .field {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  width: 100%;
+  min-width: 0;
 }
 
 .field-label {

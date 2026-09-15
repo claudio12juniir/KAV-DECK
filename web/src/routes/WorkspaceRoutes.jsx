@@ -12,10 +12,13 @@ import { PisPage } from "../features/cadastros/regrasFiscais/PisPage.jsx";
 import { CofinsPage } from "../features/cadastros/regrasFiscais/CofinsPage.jsx";
 import { IbsPage } from "../features/cadastros/regrasFiscais/IbsPage.jsx";
 import { CbsPage } from "../features/cadastros/regrasFiscais/CbsPage.jsx";
-import { NovoPedidoCompraPage } from "../features/compras/NovoPedidoCompraPage.jsx";
 import { PedidoCompraDetailPage } from "../features/compras/PedidoCompraDetailPage.jsx";
 import { PedidosCompraListPage } from "../features/compras/PedidosCompraListPage.jsx";
 import { RecebimentoPedidoCompraPage } from "../features/compras/RecebimentoPedidoCompraPage.jsx";
+import { ItensCompraPage } from "../features/compras/itensCompra/ItensCompraPage.jsx";
+import { FreteDescargaPage } from "../features/compras/freteDescarga/FreteDescargaPage.jsx";
+import { FaturaProdutorPage } from "../features/compras/faturaProdutor/FaturaProdutorPage.jsx";
+import { BaixaTitulosPage } from "../features/financeiro/titulos/BaixaTitulosPage.jsx";
 import { DashboardPage } from "../features/dashboard/DashboardPage.jsx";
 import { CaixasEmbalagemPage } from "../features/estoque/caixasEmbalagem/CaixasEmbalagemPage.jsx";
 import { InventarioDetailPage } from "../features/estoque/inventarios/InventarioDetailPage.jsx";
@@ -55,7 +58,6 @@ import { DevolucoesPage } from "../features/vendas/devolucoes/DevolucoesPage.jsx
 import { FaturarPedidoVendaPage } from "../features/vendas/FaturarPedidoVendaPage.jsx";
 import { ItensVendaPage } from "../features/vendas/itensVenda/ItensVendaPage.jsx";
 import { ItinerarioPage } from "../features/vendas/itinerario/ItinerarioPage.jsx";
-import { NovoPedidoVendaPage } from "../features/vendas/NovoPedidoVendaPage.jsx";
 import { OcorrenciasPage } from "../features/vendas/ocorrencias/OcorrenciasPage.jsx";
 import { PedidoVendaDetailPage } from "../features/vendas/PedidoVendaDetailPage.jsx";
 import { PedidosVendaListPage } from "../features/vendas/PedidosVendaListPage.jsx";
@@ -69,7 +71,13 @@ export function WorkspaceRoutes() {
     <Routes>
       <Route path="/" element={<DashboardPage />} />
       <Route path="/vendas" element={<PedidosVendaListPage />} />
-      <Route path="/vendas/novo" element={<NovoPedidoVendaPage />} />
+      {/* "novo" é capturado por :id (React Router prioriza o segmento
+          estático "novo" sobre outras rotas /vendas/:id só se existissem —
+          aqui nem precisa, é a mesma tela do Terminal de Venda) — ver
+          PedidoVendaDetailPage.jsx, modoCriacao = id === "novo". Isso
+          reproduz o comportamento real do Space Soft (mesma URL, :id = 0
+          para o estado "em branco", seção 2 do MAPEAMENTO_VENDAS_SPACESOFT.md)
+          em vez de manter uma segunda tela genérica fora do padrão. */}
       <Route path="/vendas/:id" element={<PedidoVendaDetailPage />} />
       <Route path="/vendas/:id/faturar" element={<FaturarPedidoVendaPage />} />
       <Route path="/vendas/devolucoes" element={<DevolucoesPage />} />
@@ -93,7 +101,17 @@ export function WorkspaceRoutes() {
       />
       <Route path="/vendas/separadores" element={<TerminalSeparadoresPage />} />
       <Route path="/compras" element={<PedidosCompraListPage />} />
-      <Route path="/compras/novo" element={<NovoPedidoCompraPage />} />
+      <Route
+        path="/compras/consulta-itens"
+        element={<ItensCompraPage variante="consulta" titulo="Consulta de Itens" descricao="Todos os itens comprados, cruzando todos os pedidos e fornecedores num único grid." />}
+      />
+      <Route
+        path="/compras/terminal-precos"
+        element={<ItensCompraPage variante="precos" titulo="Terminal de Preços de Compra" descricao="Auditoria de precificação — por padrão, mostra itens comprados por R$ 0,00." />}
+      />
+      <Route path="/compras/frete-descarga" element={<FreteDescargaPage />} />
+      <Route path="/compras/fatura-produtor" element={<FaturaProdutorPage />} />
+      {/* "novo" cai em :id, igual ao Terminal de Venda — ver PedidoCompraDetailPage.jsx, modoCriacao = id === "novo". */}
       <Route path="/compras/:id" element={<PedidoCompraDetailPage />} />
       <Route path="/compras/:id/recebimento" element={<RecebimentoPedidoCompraPage />} />
       <Route path="/estoque" element={<LotesPage />} />
@@ -129,11 +147,12 @@ export function WorkspaceRoutes() {
       <Route path="/participantes/colaboradores" element={<ColaboradoresPage />} />
 
       <Route path="/financeiro/titulos" element={<TitulosPage />} />
-      <Route path="/financeiro/titulos/pagar" element={<TitulosPage tipoFixo="PAGAR" titulo="Contas a pagar" />} />
+      <Route path="/financeiro/titulos/pagar" element={<TitulosPage tipoFixo="PAGAR" titulo="Títulos a Pagar" />} />
       <Route
         path="/financeiro/titulos/receber"
         element={<TitulosPage tipoFixo="RECEBER" titulo="Contas a receber" />}
       />
+      <Route path="/financeiro/titulos/baixa" element={<BaixaTitulosPage />} />
       <Route path="/financeiro/titulos/:id" element={<TituloDetailPage />} />
       <Route path="/financeiro/caixa" element={<CaixaPage />} />
       <Route path="/financeiro/contas-bancarias" element={<ContasBancariasPage />} />

@@ -37,17 +37,19 @@ export function InventariosPage() {
 
   const columns = [
     { key: "data", label: "Data", render: (row) => formatarData(row.data) },
+    { key: "itens", label: "Itens", render: (row) => row._count?.itens ?? "—" },
   ];
 
   return (
     <div>
       <div className="crud-header">
         <div>
-          <h1>Inventários físicos</h1>
-          <p>Contagem de estoque por lote e ajuste automático das diferenças.</p>
+          <span className="eyebrow">Estoque</span>
+          <h1>Inventário Físico</h1>
+          <p>Histórico de contagens — cada uma ajusta o estoque por lote automaticamente ao ser finalizada.</p>
         </div>
         <Link to="/estoque/inventarios/novo">
-          <Button>Novo inventário</Button>
+          <Button>+ Novo</Button>
         </Link>
       </div>
 

@@ -4,14 +4,18 @@ import { prisma } from "../../../lib/prisma.js";
 // validade desde que foi criado em pedidosCompra.receber() — aqui é só a
 // tela de consulta que faltava pra olhar isso tudo junto, com o pedido de
 // origem anexado.
-export async function consultar({ empresaId, fornecedorId, produtoId, dataInicial, dataFinal }) {
+export async function consultar({ empresaId, fornecedorId, produtoId, departamentoId, dataInicial, dataFinal, apenasPendente }) {
   const where = {
     empresaId,
     ...(fornecedorId ? { fornecedorId } : {}),
     ...(produtoId ? { produtoId } : {}),
+    ...(departamentoId ? { produto: { categoria: { departamentoId } } } : {}),
     ...(dataInicial || dataFinal
       ? { dataRecebimento: { ...(dataInicial ? { gte: dataInicial } : {}), ...(dataFinal ? { lte: dataFinal } : {}) } }
       : {}),
+    // "Apenas pendente" da referência = lote ainda com saldo, ou seja, o
+    // recebimento ainda não foi totalmente consumido em vendas/ajustes.
+    ...(apenasPendente ? { quantidadeAtual: { gt: 0 } } : {}),
   };
 
   const lotes = await prisma.lote.findMany({
@@ -25,7 +29,7 @@ export async function consultar({ empresaId, fornecedorId, produtoId, dataInicia
       veiculo: true,
       quantidadeInicial: true,
       quantidadeAtual: true,
-      produto: { select: { codigo: true, descricao: true } },
+      produto: { select: { codigo: true, descricao: true, unidadeMedida: { select: { sigla: true } } } },
       fornecedor: { select: { participante: { select: { razaoSocial: true } } } },
       movimentosEstoque: {
         where: { tipo: "ENTRADA" },

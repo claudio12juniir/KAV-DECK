@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Modal } from "../../../components/ui/Modal.jsx";
@@ -67,24 +67,55 @@ export function InventarioDetailPage() {
   }
 
   const columns = [
+    { key: "und", label: "Und.", render: (row) => row.produto.unidadeMedida?.sigla ?? "—" },
     { key: "produto", label: "Produto", render: (row) => row.produto.descricao },
-    { key: "quantidadeSistema", label: "Sistema" },
-    { key: "quantidadeContada", label: "Contado" },
+    { key: "saldoEst", label: "Saldo est.", render: (row) => row.quantidadeSistema },
+    { key: "qtdInv", label: "Qtd. inv.", render: (row) => row.quantidadeContada },
+    {
+      key: "diferenca",
+      label: "Diferença",
+      render: (row) => {
+        const diferenca = Number(row.quantidadeContada) - Number(row.quantidadeSistema);
+        return (
+          <span style={{ color: diferenca === 0 ? "inherit" : diferenca > 0 ? "var(--color-success)" : "var(--color-danger)" }}>
+            {diferenca > 0 ? "+" : ""}
+            {diferenca}
+          </span>
+        );
+      },
+    },
+    {
+      key: "ajuste",
+      label: "Ajuste",
+      render: (row) => (Number(row.quantidadeContada) !== Number(row.quantidadeSistema) ? "Pendente" : "—"),
+    },
   ];
 
   return (
     <div>
-      <h1>Inventário físico</h1>
-      <p>{new Date(inventario.data).toLocaleString("pt-BR")}</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", flexWrap: "wrap" }}>
+        <div>
+          <span className="eyebrow">Estoque</span>
+          <h1>Inventário Físico</h1>
+          <p>{new Date(inventario.data).toLocaleString("pt-BR")}</p>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Link to="/estoque/inventarios/novo">
+            <Button variant="secondary">+ Novo</Button>
+          </Link>
+          <Button variant="ghost" onClick={() => setConfirmarFechamento(true)}>
+            Finalizar
+          </Button>
+          <Link to="/estoque/inventarios">
+            <Button variant="ghost">Histórico</Button>
+          </Link>
+        </div>
+      </div>
 
       <Card style={{ marginBottom: "24px" }}>
-        <h3>Itens contados</h3>
+        <h3 style={{ marginTop: 0 }}>Itens ({inventario.itens.length})</h3>
         <DataTable columns={columns} rows={inventario.itens} emptyMessage="Nenhum item neste inventário." />
       </Card>
-
-      <Button variant="danger" onClick={() => setConfirmarFechamento(true)}>
-        Fechar inventário
-      </Button>
 
       <Modal
         open={confirmarFechamento}

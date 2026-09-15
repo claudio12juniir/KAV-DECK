@@ -14,7 +14,7 @@ const SELECT = {
   pedidoVendaId: true,
   inventarioFisicoId: true,
   data: true,
-  produto: { select: { codigo: true, descricao: true } },
+  produto: { select: { codigo: true, descricao: true, unidadeMedida: { select: { sigla: true } } } },
 };
 
 export async function list({ empresaId, skip, take, produtoId, loteId }) {

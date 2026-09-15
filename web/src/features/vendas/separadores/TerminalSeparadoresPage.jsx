@@ -142,7 +142,7 @@ export function TerminalSeparadoresPage() {
                 <strong>
                   Pedidos ({totalPedidos ? 1 : 0} - {totalPedidos})
                 </strong>
-                <button type="button" className="autocomplete-trocar" title="Atualizar" onClick={() => setRefreshKey((k) => k + 1)}>
+                <button type="button" className="icon-btn" title="Atualizar" onClick={() => setRefreshKey((k) => k + 1)}>
                   <FiRefreshCw />
                 </button>
               </div>

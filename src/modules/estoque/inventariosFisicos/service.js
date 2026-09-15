@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../../lib/prisma.js";
 import { AppError } from "../../../utils/AppError.js";
 
-const SELECT_HEADER = { id: true, data: true, responsavelId: true, criadoEm: true };
+const SELECT_HEADER = { id: true, data: true, responsavelId: true, criadoEm: true, _count: { select: { itens: true } } };
 
 const SELECT_DETAIL = {
   ...SELECT_HEADER,
@@ -13,7 +13,7 @@ const SELECT_DETAIL = {
       loteId: true,
       quantidadeContada: true,
       quantidadeSistema: true,
-      produto: { select: { codigo: true, descricao: true } },
+      produto: { select: { codigo: true, descricao: true, unidadeMedida: { select: { sigla: true } } } },
     },
   },
 };
