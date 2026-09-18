@@ -136,3 +136,21 @@ export const atualizarCliente = asyncHandler(async (req, res) => {
   });
   res.json(pedido);
 });
+
+export const favoritos = asyncHandler(async (req, res) => {
+  const items = await service.favoritos({
+    empresaId: req.user.empresaId,
+    clienteId: req.query.clienteId,
+    limite: req.query.limite,
+  });
+  res.json({ items });
+});
+
+export const importarItens = asyncHandler(async (req, res) => {
+  const pedido = await service.importarItens({
+    empresaId: req.user.empresaId,
+    id: req.params.id,
+    pedidoOrigemId: req.body.pedidoOrigemId,
+  });
+  res.json(pedido);
+});

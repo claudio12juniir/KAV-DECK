@@ -163,3 +163,11 @@ export function atualizarVendedorPedidoVenda(id, vendedorId) {
 export function atualizarClientePedidoVenda(id, clienteId) {
   return apiClient.patch(`/vendas/pedidos/${id}/cliente`, { clienteId });
 }
+
+export function listFavoritosVenda({ clienteId, limite }) {
+  return apiClient.get("/vendas/pedidos/favoritos", { clienteId, limite }).then(({ items }) => items);
+}
+
+export function importarItensPedidoVenda(id, pedidoOrigemId) {
+  return apiClient.post(`/vendas/pedidos/${id}/importar-itens`, { pedidoOrigemId });
+}

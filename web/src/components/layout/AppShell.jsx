@@ -32,6 +32,7 @@ const NAV_GROUPS = [
       { to: "/compras/consulta-itens", label: "Consulta de Itens" },
       { to: "/compras", label: "Terminal de Compras" },
       { to: "/compras/terminal-precos", label: "Terminal de Preços" },
+      { to: "/compras/precos", label: "Preços de Compra" },
       { to: "/compras/frete-descarga", label: "Controle de Frete / Descarga" },
     ],
   },

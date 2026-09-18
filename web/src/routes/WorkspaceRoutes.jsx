@@ -17,6 +17,7 @@ import { PedidosCompraListPage } from "../features/compras/PedidosCompraListPage
 import { RecebimentoPedidoCompraPage } from "../features/compras/RecebimentoPedidoCompraPage.jsx";
 import { ItensCompraPage } from "../features/compras/itensCompra/ItensCompraPage.jsx";
 import { FreteDescargaPage } from "../features/compras/freteDescarga/FreteDescargaPage.jsx";
+import { PrecosCompraPage } from "../features/compras/precos/PrecosCompraPage.jsx";
 import { FaturaProdutorPage } from "../features/compras/faturaProdutor/FaturaProdutorPage.jsx";
 import { BaixaTitulosPage } from "../features/financeiro/titulos/BaixaTitulosPage.jsx";
 import { DashboardPage } from "../features/dashboard/DashboardPage.jsx";
@@ -119,6 +120,7 @@ export function WorkspaceRoutes() {
         element={<ItensCompraPage variante="precos" titulo="Terminal de Preços de Compra" descricao="Auditoria de precificação — por padrão, mostra itens comprados por R$ 0,00." />}
       />
       <Route path="/compras/frete-descarga" element={<FreteDescargaPage />} />
+      <Route path="/compras/precos" element={<PrecosCompraPage />} />
       <Route path="/compras/fatura-produtor" element={<FaturaProdutorPage />} />
       {/* "novo" cai em :id, igual ao Terminal de Venda — ver PedidoCompraDetailPage.jsx, modoCriacao = id === "novo". */}
       <Route path="/compras/:id" element={<PedidoCompraDetailPage />} />

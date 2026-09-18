@@ -24,7 +24,10 @@ import {
   dividirPedidoVenda,
   duplicarPedidoVenda,
   getPedidoVenda,
+  importarItensPedidoVenda,
   listColaboradores,
+  listFavoritosVenda,
+  listPedidosVenda,
   listRotasEntrega,
   removeItemPedidoVenda,
   separarPedidoVenda,
@@ -97,6 +100,14 @@ export function PedidoVendaDetailPage() {
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);
   const [mostrarOrdenar, setMostrarOrdenar] = useState(false);
   const [ordenacao, setOrdenacao] = useState("lancamento");
+
+  const [mostrarFavoritos, setMostrarFavoritos] = useState(false);
+  const [favoritos, setFavoritos] = useState([]);
+
+  const [modalImportarAberto, setModalImportarAberto] = useState(false);
+  const [pedidosParaImportar, setPedidosParaImportar] = useState([]);
+  const [pedidoOrigemId, setPedidoOrigemId] = useState("");
+  const [importando, setImportando] = useState(false);
 
   const [exibirEstoque, setExibirEstoque] = useState(false);
   const [saldosPorProduto, setSaldosPorProduto] = useState(new Map());
@@ -379,6 +390,62 @@ export function PedidoVendaDetailPage() {
     }
   }
 
+  async function abrirFavoritos() {
+    setMostrarFavoritos((v) => !v);
+    if (!favoritos.length && pedido?.clienteId) {
+      try {
+        const items = await listFavoritosVenda({ clienteId: pedido.clienteId, limite: 10 });
+        setFavoritos(items);
+      } catch (err) {
+        toast.error(err.message ?? "Não foi possível carregar os favoritos.");
+      }
+    }
+  }
+
+  async function adicionarFavorito(favorito) {
+    setMostrarFavoritos(false);
+    setAdicionandoItem(true);
+    try {
+      await addItemPedidoVenda(id, {
+        produtoId: favorito.produtoId,
+        quantidade: "1",
+        precoUnitario: String(favorito.ultimoPreco ?? 0),
+      });
+      toast.success("Item adicionado ao pedido.");
+      await carregar();
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível adicionar o item.");
+    } finally {
+      setAdicionandoItem(false);
+    }
+  }
+
+  async function abrirModalImportar() {
+    setModalImportarAberto(true);
+    setPedidoOrigemId("");
+    try {
+      const { items } = await listPedidosVenda({ pageSize: 50 });
+      setPedidosParaImportar(items.filter((p) => p.id !== id));
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar os pedidos.");
+    }
+  }
+
+  async function handleImportarItens() {
+    if (!pedidoOrigemId) return;
+    setImportando(true);
+    try {
+      await importarItensPedidoVenda(id, pedidoOrigemId);
+      toast.success("Itens importados com sucesso.");
+      setModalImportarAberto(false);
+      await carregar();
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível importar os itens.");
+    } finally {
+      setImportando(false);
+    }
+  }
+
   async function handleTrocarSeparador() {
     const nome = window.prompt("ID do colaborador separador (deixe em branco para remover):", pedido.separadorId ?? "");
     if (nome === null) return;
@@ -627,10 +694,22 @@ export function PedidoVendaDetailPage() {
                 + Adicionar itens
               </Button>
             )}
-            <Button variant="ghost" onClick={stub("Favoritos")}>
-              Favoritos
-            </Button>
-            <Button variant="ghost" onClick={stub("Importar")}>
+            <div style={{ position: "relative" }}>
+              <Button variant="ghost" onClick={abrirFavoritos} disabled={!pedido}>
+                Favoritos
+              </Button>
+              {mostrarFavoritos && (
+                <DropdownMenu
+                  items={favoritos.length ? favoritos.map((f) => `${f.produto.descricao} (${f.vezesVendido}x)`) : ["Nenhum favorito para este cliente"]}
+                  onSelect={(label) => {
+                    const favorito = favoritos.find((f) => `${f.produto.descricao} (${f.vezesVendido}x)` === label);
+                    if (favorito) adicionarFavorito(favorito);
+                  }}
+                  onClose={() => setMostrarFavoritos(false)}
+                />
+              )}
+            </div>
+            <Button variant="ghost" onClick={abrirModalImportar} disabled={!pedido}>
               Importar
             </Button>
             <Button variant="ghost" onClick={stub("Perfil do pedido")}>
@@ -937,6 +1016,31 @@ export function PedidoVendaDetailPage() {
             {item.produto.descricao} — {item.quantidade}
           </label>
         ))}
+      </Modal>
+
+      <Modal
+        open={modalImportarAberto}
+        onClose={() => setModalImportarAberto(false)}
+        title="Importar itens de outro pedido"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModalImportarAberto(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleImportarItens} loading={importando} disabled={!pedidoOrigemId}>
+              Importar
+            </Button>
+          </>
+        }
+      >
+        <Select label="Pedido de origem" value={pedidoOrigemId} onChange={(e) => setPedidoOrigemId(e.target.value)}>
+          <option value="">Selecione...</option>
+          {pedidosParaImportar.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.cliente.participante.razaoSocial} — {formatarData(p.dataEmissao)}
+            </option>
+          ))}
+        </Select>
       </Modal>
     </div>
   );

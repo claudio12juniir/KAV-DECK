@@ -53,7 +53,7 @@ export function listItensCompra(filtros = {}) {
 }
 
 export function listFavoritosCompra({ fornecedorId, limite }) {
-  return apiClient.get("/compras/pedidos/favoritos", { fornecedorId, limite });
+  return apiClient.get("/compras/pedidos/favoritos", { fornecedorId, limite }).then(({ items }) => items);
 }
 
 export function listColaboradores({ tipo, page, pageSize } = {}) {

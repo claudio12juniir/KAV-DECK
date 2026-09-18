@@ -644,3 +644,63 @@ export async function atualizarCliente({ empresaId, id, clienteId }) {
   await ensureCliente({ empresaId, clienteId });
   return prisma.pedidoVenda.update({ where: { id }, data: { clienteId }, select: SELECT_DETAIL });
 }
+
+// "Favoritos" no balcão: em vez de guardar uma lista fixa, calcula os
+// produtos mais vendidos pra esse cliente no histórico — sempre reflete o
+// que de fato costuma ser pedido, sem precisar de tela própria de cadastro
+// (mesma lógica de src/modules/compras/pedidosCompra/service.js).
+export async function favoritos({ empresaId, clienteId, limite = 10 }) {
+  const agrupado = await prisma.itemPedidoVenda.groupBy({
+    by: ["produtoId"],
+    where: { pedidoVenda: { empresaId, clienteId } },
+    _count: { produtoId: true },
+    _max: { precoUnitario: true },
+    orderBy: { _count: { produtoId: "desc" } },
+    take: limite,
+  });
+  if (!agrupado.length) return [];
+
+  const produtos = await prisma.produto.findMany({
+    where: { id: { in: agrupado.map((item) => item.produtoId) } },
+    select: { id: true, codigo: true, descricao: true },
+  });
+  const produtoPorId = new Map(produtos.map((produto) => [produto.id, produto]));
+
+  return agrupado.map((item) => ({
+    produtoId: item.produtoId,
+    produto: produtoPorId.get(item.produtoId),
+    vezesVendido: item._count.produtoId,
+    ultimoPreco: item._max.precoUnitario,
+  }));
+}
+
+// Copia os itens de outro pedido (de qualquer cliente/data) pro pedido
+// atual — atalho de balcão pra repetir uma venda parecida sem digitar tudo
+// de novo. Só funciona com o pedido de destino ainda ABERTO.
+export async function importarItens({ empresaId, id, pedidoOrigemId }) {
+  const pedido = await getPedidoOrThrow({ empresaId, id, select: { id: true, status: true } });
+  if (pedido.status !== "ABERTO") {
+    throw new AppError(409, "PEDIDO_NAO_EDITAVEL", "Só é possível importar itens pra um pedido em aberto.");
+  }
+
+  const origem = await getPedidoOrThrow({
+    empresaId,
+    id: pedidoOrigemId,
+    select: { itens: { select: { produtoId: true, quantidade: true, precoUnitario: true, desconto: true } } },
+  });
+  if (!origem.itens.length) {
+    throw new AppError(422, "PEDIDO_SEM_ITENS", "O pedido de origem não tem itens pra importar.");
+  }
+
+  await prisma.itemPedidoVenda.createMany({
+    data: origem.itens.map((item) => ({
+      pedidoVendaId: id,
+      produtoId: item.produtoId,
+      quantidade: item.quantidade,
+      precoUnitario: item.precoUnitario,
+      desconto: item.desconto,
+    })),
+  });
+
+  return getPedidoOrThrow({ empresaId, id });
+}

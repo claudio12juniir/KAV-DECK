@@ -15,6 +15,8 @@ import {
   createPedidoVendaSchema,
   dividirSchema,
   faturarSchema,
+  favoritosQuerySchema,
+  importarItensSchema,
   itemPedidoVendaSchema,
   separarSchema,
   updateStatusSchema,
@@ -34,6 +36,7 @@ const listQuerySchema = paginationQuerySchema.extend({
 const itemParamSchema = z.object({ id: z.string().uuid(), itemId: z.string().uuid() });
 
 router.get("/", validate({ query: listQuerySchema }), controller.list);
+router.get("/favoritos", validate({ query: favoritosQuerySchema }), controller.favoritos);
 router.get("/:id", validate({ params: idParamSchema }), controller.getById);
 router.post(
   "/",
@@ -118,4 +121,10 @@ router.patch(
   requireRole("VENDEDOR", "ADMIN"),
   validate({ params: idParamSchema, body: atualizarClienteSchema }),
   controller.atualizarCliente,
+);
+router.post(
+  "/:id/importar-itens",
+  requireRole("VENDEDOR", "ADMIN"),
+  validate({ params: idParamSchema, body: importarItensSchema }),
+  controller.importarItens,
 );

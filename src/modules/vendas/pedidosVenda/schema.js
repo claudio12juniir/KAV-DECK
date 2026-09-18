@@ -76,3 +76,12 @@ export const atualizarVendedorSchema = z.object({
 export const atualizarClienteSchema = z.object({
   clienteId: z.string().uuid(),
 });
+
+export const favoritosQuerySchema = z.object({
+  clienteId: z.string().uuid(),
+  limite: z.coerce.number().int().positive().max(50).optional(),
+});
+
+export const importarItensSchema = z.object({
+  pedidoOrigemId: z.string().uuid(),
+});
