@@ -6,6 +6,7 @@ export const createProdutoSchema = z.object({
   descricao: z.string().min(1).max(200),
   unidadeMedidaId: z.string().uuid(),
   categoriaId: z.string().uuid(),
+  departamentoId: z.string().uuid(),
   ncm: z.string().max(20).optional(),
   cstCfopPadrao: z.string().max(20).optional(),
   estoqueMinimo: decimalString().optional(),

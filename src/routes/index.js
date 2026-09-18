@@ -8,6 +8,7 @@ import { router as assinaturaRouter } from "../modules/sistema/assinatura/routes
 
 import { router as departamentosRouter } from "../modules/cadastros/departamentos/routes.js";
 import { router as categoriasRouter } from "../modules/cadastros/categorias/routes.js";
+import { router as logsRouter } from "../modules/cadastros/logs/routes.js";
 import { router as unidadesMedidaRouter } from "../modules/cadastros/unidadesMedida/routes.js";
 import { router as produtosRouter } from "../modules/cadastros/produtos/routes.js";
 import { router as condicoesPagamentoRouter } from "../modules/cadastros/condicoesPagamento/routes.js";
@@ -46,6 +47,7 @@ import { router as contasBancariasRouter } from "../modules/financeiro/contasBan
 import { router as planoContasRouter } from "../modules/financeiro/planoContas/routes.js";
 import { router as centrosCustoRouter } from "../modules/financeiro/centrosCusto/routes.js";
 import { router as caixaRouter } from "../modules/financeiro/caixa/routes.js";
+import { router as configuracaoFinanceiraRouter } from "../modules/financeiro/configuracao/routes.js";
 import { router as chequesEmitidosRouter } from "../modules/financeiro/chequesEmitidos/routes.js";
 import { router as chequesTerceirosRouter } from "../modules/financeiro/chequesTerceiros/routes.js";
 
@@ -87,6 +89,7 @@ router.use("/mercado-pago/webhook", webhookMercadoPagoRouter);
 
 router.use("/cadastros/departamentos", departamentosRouter);
 router.use("/cadastros/categorias", categoriasRouter);
+router.use("/cadastros/logs", logsRouter);
 router.use("/cadastros/unidades-medida", unidadesMedidaRouter);
 router.use("/cadastros/produtos", produtosRouter);
 router.use("/cadastros/condicoes-pagamento", condicoesPagamentoRouter);
@@ -132,6 +135,7 @@ router.use("/financeiro/contas-bancarias", contasBancariasRouter);
 router.use("/financeiro/plano-contas", planoContasRouter);
 router.use("/financeiro/centros-custo", centrosCustoRouter);
 router.use("/financeiro/caixa/movimentos", caixaRouter);
+router.use("/financeiro/configuracao", configuracaoFinanceiraRouter);
 router.use("/financeiro/cheques-emitidos", chequesEmitidosRouter);
 router.use("/financeiro/cheques-terceiros", chequesTerceirosRouter);
 

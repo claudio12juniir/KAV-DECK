@@ -1,0 +1,39 @@
+.simple-bar-chart-legenda {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.simple-bar-chart-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.simple-bar-chart-legenda-cor {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.simple-bar-chart-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-5);
+  font-size: var(--text-sm);
+}
+
+.simple-bar-chart-tabela th,
+.simple-bar-chart-tabela td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.simple-bar-chart-tabela th {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}

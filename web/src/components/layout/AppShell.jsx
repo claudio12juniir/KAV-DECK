@@ -74,6 +74,7 @@ const NAV_GROUPS = [
     items: [
       { to: "/participantes", label: "Participantes" },
       { to: "/participantes/clientes", label: "Clientes" },
+      { to: "/participantes/fornecedores", label: "Fornecedores" },
       { to: "/participantes/grupos-empresas", label: "Grupos de empresas" },
       { to: "/participantes/transportadoras", label: "Transportadoras" },
       { to: "/participantes/rotas-entrega", label: "Rotas de entrega" },
@@ -89,6 +90,8 @@ const NAV_GROUPS = [
       { to: "/compras/fatura-produtor", label: "Fatura de Produtor" },
       { to: "/financeiro/titulos", label: "Todos os títulos" },
       { to: "/financeiro/caixa", label: "Caixa" },
+      { to: "/financeiro/fluxo-caixa", label: "Fluxo de caixa" },
+      { to: "/financeiro/configuracao", label: "Configuração" },
       { to: "/financeiro/contas-bancarias", label: "Contas bancárias" },
       { to: "/financeiro/plano-contas", label: "Plano de contas" },
       { to: "/financeiro/centros-custo", label: "Centros de custo" },
@@ -100,10 +103,13 @@ const NAV_GROUPS = [
     label: "Fiscal",
     items: [
       { to: "/fiscal/notas", label: "Notas fiscais" },
+      { to: "/fiscal/itens-nota", label: "Consulta de itens da nota" },
       { to: "/fiscal/naturezas-operacao", label: "Naturezas de operação" },
       { to: "/fiscal/certificados-digitais", label: "Certificados digitais" },
       { to: "/fiscal/cfop", label: "CFOP" },
       { to: "/fiscal/tributacao-produto", label: "Tributação de produtos" },
+      { to: "/fiscal/utilitarios", label: "Utilitários fiscais" },
+      { to: "/fiscal/configuracoes", label: "Configurações fiscais" },
     ],
   },
 ];
@@ -199,9 +205,12 @@ export function AppShell() {
     ? [
         ...NAV_GROUPS,
         { label: "Relatórios", to: "/relatorios" },
+        { label: "Analytics", to: "/gerenciais/analytics" },
+        { label: "Dashboard Gerencial", to: "/gerenciais/dashboard" },
         {
           label: "Sistema",
           items: [
+            { to: "/sistema/minha-empresa", label: "Minha Empresa" },
             { to: "/sistema/controle-acesso", label: "Controle de Acesso" },
             { to: "/sistema/assinatura", label: "Assinatura" },
           ],

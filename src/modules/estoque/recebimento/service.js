@@ -9,7 +9,7 @@ export async function consultar({ empresaId, fornecedorId, produtoId, departamen
     empresaId,
     ...(fornecedorId ? { fornecedorId } : {}),
     ...(produtoId ? { produtoId } : {}),
-    ...(departamentoId ? { produto: { categoria: { departamentoId } } } : {}),
+    ...(departamentoId ? { produto: { departamentoId } } : {}),
     ...(dataInicial || dataFinal
       ? { dataRecebimento: { ...(dataInicial ? { gte: dataInicial } : {}), ...(dataFinal ? { lte: dataFinal } : {}) } }
       : {}),

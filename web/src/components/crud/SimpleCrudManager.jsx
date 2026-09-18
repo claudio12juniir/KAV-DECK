@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../features/cadastros/logs/api.js";
 import { Button } from "../ui/Button.jsx";
 import { Input } from "../ui/Input.jsx";
 import { Modal } from "../ui/Modal.jsx";
@@ -7,6 +8,12 @@ import { Select } from "../ui/Select.jsx";
 import { DataTable } from "../ui/Table.jsx";
 import { useToast } from "../ui/Toast.jsx";
 import "./SimpleCrudManager.css";
+
+const ACAO_LOG_LABEL = { CRIACAO: "Criação", ATUALIZACAO: "Atualização", EXCLUSAO: "Exclusão" };
+
+function formatarDataHora(iso) {
+  return new Date(iso).toLocaleString("pt-BR");
+}
 
 function valorInicial(fields) {
   return Object.fromEntries(
@@ -27,6 +34,7 @@ export function SimpleCrudManager({
   columns,
   idField = "id",
   searchable = false,
+  entidade,
 }) {
   const toast = useToast();
   const [itens, setItens] = useState([]);
@@ -39,6 +47,9 @@ export function SimpleCrudManager({
   const [excluir, setExcluir] = useState(null);
   const [excluindo, setExcluindo] = useState(false);
   const [opcoesCarregadas, setOpcoesCarregadas] = useState({});
+  const [verLogsDe, setVerLogsDe] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
 
   async function carregar(q) {
     setCarregando(true);
@@ -120,6 +131,23 @@ export function SimpleCrudManager({
     }
   }
 
+  async function handleAtualizar() {
+    await carregar(searchable ? busca.trim() || undefined : undefined);
+  }
+
+  async function abrirLogs(row) {
+    setVerLogsDe(row);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list(entidade, row[idField]);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar os logs.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
+
   async function handleExcluir() {
     setExcluindo(true);
     try {
@@ -152,6 +180,11 @@ export function SimpleCrudManager({
           >
             Excluir
           </button>
+          {entidade && (
+            <button type="button" className="autocomplete-trocar" onClick={() => abrirLogs(row)}>
+              Logs
+            </button>
+          )}
         </div>
       ),
     },
@@ -164,7 +197,12 @@ export function SimpleCrudManager({
           <h1>{title}</h1>
           {description && <p>{description}</p>}
         </div>
-        <Button onClick={abrirNovo}>Novo</Button>
+        <div className="crud-header-acoes">
+          <Button variant="ghost" onClick={handleAtualizar} loading={carregando}>
+            Atualizar
+          </Button>
+          <Button onClick={abrirNovo}>Novo</Button>
+        </div>
       </div>
 
       {searchable && (
@@ -264,6 +302,25 @@ export function SimpleCrudManager({
       >
         Essa ação não pode ser desfeita.
       </Modal>
+
+      {entidade && (
+        <Modal open={Boolean(verLogsDe)} onClose={() => setVerLogsDe(null)} title="Logs">
+          {carregandoLogs ? (
+            <p>Carregando...</p>
+          ) : logs.length === 0 ? (
+            <p>Nenhum log encontrado.</p>
+          ) : (
+            <ul className="crud-logs-lista">
+              {logs.map((log) => (
+                <li key={log.id}>
+                  <strong>{ACAO_LOG_LABEL[log.acao] ?? log.acao}</strong> em {formatarDataHora(log.criadoEm)}
+                  {log.usuario?.nome ? ` por ${log.usuario.nome}` : ""}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

@@ -36,7 +36,8 @@ DECLARE
     'tipos_caixa_embalagem', 'movimentos_comodato',
     'titulos_financeiros', 'movimentos_caixa', 'contas_bancarias',
     'plano_contas', 'centros_custo', 'cheques_emitidos', 'cheques_terceiros',
-    'notas_fiscais', 'naturezas_operacao', 'certificados_digitais'
+    'notas_fiscais', 'naturezas_operacao', 'certificados_digitais',
+    'logs_alteracao'
   ];
 BEGIN
   FOREACH tabela IN ARRAY tabelas LOOP

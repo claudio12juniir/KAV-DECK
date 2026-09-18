@@ -20,6 +20,7 @@ const SELECT = {
   descricao: true,
   unidadeMedidaId: true,
   categoriaId: true,
+  departamentoId: true,
   ncm: true,
   cstCfopPadrao: true,
   estoqueMinimo: true,
@@ -32,7 +33,7 @@ const SELECT = {
   atualizadoEm: true,
 };
 
-async function ensureReferences({ empresaId, unidadeMedidaId, categoriaId }) {
+async function ensureReferences({ empresaId, unidadeMedidaId, categoriaId, departamentoId }) {
   const checks = [];
   if (unidadeMedidaId) {
     checks.push(
@@ -49,6 +50,15 @@ async function ensureReferences({ empresaId, unidadeMedidaId, categoriaId }) {
         .findFirst({ where: { id: categoriaId, empresaId }, select: { id: true } })
         .then((r) => {
           if (!r) throw new AppError(422, "INVALID_REFERENCE", "Categoria informada não existe.");
+        }),
+    );
+  }
+  if (departamentoId) {
+    checks.push(
+      prisma.departamento
+        .findFirst({ where: { id: departamentoId, empresaId }, select: { id: true } })
+        .then((r) => {
+          if (!r) throw new AppError(422, "INVALID_REFERENCE", "Departamento informado não existe.");
         }),
     );
   }
@@ -80,13 +90,23 @@ export async function getById({ empresaId, id, usuario }) {
 }
 
 export async function create({ empresaId, data }) {
-  await ensureReferences({ empresaId, unidadeMedidaId: data.unidadeMedidaId, categoriaId: data.categoriaId });
+  await ensureReferences({
+    empresaId,
+    unidadeMedidaId: data.unidadeMedidaId,
+    categoriaId: data.categoriaId,
+    departamentoId: data.departamentoId,
+  });
   return prisma.produto.create({ data: { ...data, empresaId }, select: SELECT });
 }
 
 export async function update({ empresaId, id, data }) {
   await getById({ empresaId, id });
-  await ensureReferences({ empresaId, unidadeMedidaId: data.unidadeMedidaId, categoriaId: data.categoriaId });
+  await ensureReferences({
+    empresaId,
+    unidadeMedidaId: data.unidadeMedidaId,
+    categoriaId: data.categoriaId,
+    departamentoId: data.departamentoId,
+  });
   return prisma.produto.update({ where: { id }, data, select: SELECT });
 }
 

@@ -17,7 +17,7 @@ export async function consultar({ empresaId, produtoId, departamentoId, produto:
         empresaId,
         ativo: true,
         ...(produtoId ? { id: produtoId } : {}),
-        ...(departamentoId ? { categoria: { departamentoId } } : {}),
+        ...(departamentoId ? { departamentoId } : {}),
         ...(nomeProduto ? { descricao: { contains: nomeProduto, mode: "insensitive" } } : {}),
       },
       select: { id: true, codigo: true, descricao: true, unidadeMedida: { select: { sigla: true, fatorConversao: true } } },

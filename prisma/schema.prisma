@@ -169,8 +169,11 @@ model Empresa {
   telefone        String?
   emailServico    String?  @map("email_servico")
   logotipoDataUrl String?  @map("logotipo_data_url")
+  contaBancariaPadraoBoletoId String? @map("conta_bancaria_padrao_boleto_id") @db.Uuid
   criadoEm        DateTime @default(now()) @map("criado_em")
   atualizadoEm    DateTime @updatedAt @map("atualizado_em")
+
+  contaBancariaPadraoBoleto ContaBancaria? @relation("ContaPadraoBoleto", fields: [contaBancariaPadraoBoletoId], references: [id], onDelete: SetNull)
 
   usuarios               Usuario[]
   colaboradores          Colaborador[]
@@ -214,7 +217,9 @@ model Empresa {
   configuracaoFiscal     ConfiguracaoFiscal?
   assinatura             AssinaturaEmpresa?
   pontosAcesso           PontoAcesso[]
+  logsAlteracao          LogAlteracao[]
 
+  @@index([contaBancariaPadraoBoletoId])
   @@map("empresas")
 }
 
@@ -320,6 +325,7 @@ model Usuario {
   bloqueiosAutorizados   BloqueioFinanceiroCliente[] @relation("BloqueioAutorizadoPor")
   sessaoAtiva            SessaoAtiva?
   pontoAcesso            PontoAcesso?
+  logsAlteracao          LogAlteracao[]
 
   @@index([empresaId])
   @@map("usuarios")
@@ -413,11 +419,12 @@ model Departamento {
   empresaId    String   @map("empresa_id") @db.Uuid
   codigo       String
   nome         String
+  ativo        Boolean  @default(true)
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  empresa    Empresa     @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  categorias Categoria[]
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  produtos Produto[]
 
   @@unique([empresaId, codigo])
   @@index([empresaId])
@@ -425,21 +432,19 @@ model Departamento {
 }
 
 model Categoria {
-  id             String   @id @default(uuid()) @db.Uuid
-  empresaId      String   @map("empresa_id") @db.Uuid
-  departamentoId String   @map("departamento_id") @db.Uuid
-  codigo         String
-  nome           String
-  criadoEm       DateTime @default(now()) @map("criado_em")
-  atualizadoEm   DateTime @updatedAt @map("atualizado_em")
+  id           String   @id @default(uuid()) @db.Uuid
+  empresaId    String   @map("empresa_id") @db.Uuid
+  codigo       String
+  nome         String
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  departamento Departamento @relation(fields: [departamentoId], references: [id], onDelete: Restrict)
-  produtos     Produto[]
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  produtos Produto[]
 
   @@unique([empresaId, codigo])
   @@index([empresaId])
-  @@index([departamentoId])
   @@map("categorias")
 }
 
@@ -467,6 +472,7 @@ model Produto {
   descricao       String
   unidadeMedidaId String   @map("unidade_medida_id") @db.Uuid
   categoriaId     String   @map("categoria_id") @db.Uuid
+  departamentoId  String   @map("departamento_id") @db.Uuid
   ncm             String?
   cstCfopPadrao   String?  @map("cst_cfop_padrao")
   estoqueMinimo   Decimal  @default(0) @map("estoque_minimo") @db.Decimal(14, 4)
@@ -481,6 +487,7 @@ model Produto {
   empresa       Empresa       @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   unidadeMedida UnidadeMedida @relation(fields: [unidadeMedidaId], references: [id], onDelete: Restrict)
   categoria     Categoria     @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  departamento  Departamento  @relation(fields: [departamentoId], references: [id], onDelete: Restrict)
 
   itensTabelaPreco    ItemTabelaPreco[]
   itensPedidoCompra   ItemPedidoCompra[]
@@ -497,7 +504,34 @@ model Produto {
   @@unique([empresaId, codigo])
   @@index([empresaId, ativo])
   @@index([categoriaId])
+  @@index([departamentoId])
   @@map("produtos")
+}
+
+// Histórico de alterações por registro, igual ao botão "Logs" de cada linha
+// nas telas de cadastro do Space Soft. Genérico (entidade + entidadeId) pra
+// não precisar de uma tabela por cadastro.
+enum AcaoLog {
+  CRIACAO
+  ATUALIZACAO
+  EXCLUSAO
+}
+
+model LogAlteracao {
+  id         String   @id @default(uuid()) @db.Uuid
+  empresaId  String   @map("empresa_id") @db.Uuid
+  entidade   String
+  entidadeId String   @map("entidade_id") @db.Uuid
+  acao       AcaoLog
+  usuarioId  String?  @map("usuario_id") @db.Uuid
+  dados      Json?
+  criadoEm   DateTime @default(now()) @map("criado_em")
+
+  empresa Empresa  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([empresaId, entidade, entidadeId])
+  @@map("logs_alteracao")
 }
 
 model RegraIcms {
@@ -1294,9 +1328,10 @@ model ContaBancaria {
   conta     String
   criadoEm  DateTime @default(now()) @map("criado_em")
 
-  empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  movimentosCaixa MovimentoCaixa[]
-  chequesEmitidos ChequeEmitido[]
+  empresa                Empresa          @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  movimentosCaixa        MovimentoCaixa[]
+  chequesEmitidos        ChequeEmitido[]
+  empresasComContaPadraoBoleto Empresa[]  @relation("ContaPadraoBoleto")
 
   @@index([empresaId])
   @@map("contas_bancarias")

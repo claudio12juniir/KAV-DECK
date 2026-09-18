@@ -1,6 +1,7 @@
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { SimpleCrudManager } from "../../../components/crud/SimpleCrudManager.jsx";
 import { listCategoriasOptions } from "../categorias/api.js";
+import { listDepartamentosOptions } from "../departamentos/api.js";
 import { listUnidadesMedidaOptions } from "../unidadesMedida/api.js";
 import { produtosApi } from "./api.js";
 
@@ -13,6 +14,7 @@ const fields = [
   { name: "descricao", label: "Descrição", required: true },
   { name: "unidadeMedidaId", label: "Unidade de medida", type: "select", required: true, options: listUnidadesMedidaOptions },
   { name: "categoriaId", label: "Categoria", type: "select", required: true, options: listCategoriasOptions },
+  { name: "departamentoId", label: "Departamento", type: "select", required: true, options: listDepartamentosOptions },
   { name: "precoReferencia", label: "Preço de referência", type: "number" },
   { name: "estoqueMinimo", label: "Estoque mínimo", type: "number" },
   { name: "estoqueMaximo", label: "Estoque máximo", type: "number" },
@@ -46,6 +48,7 @@ export function ProdutosPage() {
       fields={fields}
       columns={columns}
       searchable
+      entidade="produto"
     />
   );
 }

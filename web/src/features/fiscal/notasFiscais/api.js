@@ -19,3 +19,7 @@ export function updateNotaFiscalStatus(id, status, chaveAcesso) {
 export function addManifestacao(id, tipoEvento) {
   return apiClient.post(`/fiscal/notas/${id}/manifestacoes`, { tipoEvento });
 }
+
+export function downloadXmlLote(ids) {
+  return apiClient.downloadBlob("/fiscal/notas/xml", { ids: ids.join(",") }, "notas-fiscais-xml.zip");
+}

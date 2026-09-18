@@ -1,7 +1,7 @@
 import { prisma } from "../../../lib/prisma.js";
 import { AppError } from "../../../utils/AppError.js";
 
-const SELECT = { id: true, codigo: true, nome: true, criadoEm: true, atualizadoEm: true };
+const SELECT = { id: true, codigo: true, nome: true, ativo: true, criadoEm: true, atualizadoEm: true };
 
 export async function list({ empresaId, skip, take }) {
   const [items, total] = await Promise.all([

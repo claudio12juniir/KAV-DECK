@@ -5,18 +5,10 @@ const SELECT = {
   id: true,
   codigo: true,
   nome: true,
-  departamentoId: true,
+  ativo: true,
   criadoEm: true,
   atualizadoEm: true,
 };
-
-async function ensureDepartamento({ empresaId, departamentoId }) {
-  const departamento = await prisma.departamento.findFirst({
-    where: { id: departamentoId, empresaId },
-    select: { id: true },
-  });
-  if (!departamento) throw new AppError(422, "INVALID_REFERENCE", "Departamento informado não existe.");
-}
 
 export async function list({ empresaId, skip, take }) {
   const [items, total] = await Promise.all([
@@ -33,15 +25,11 @@ export async function getById({ empresaId, id }) {
 }
 
 export async function create({ empresaId, data }) {
-  await ensureDepartamento({ empresaId, departamentoId: data.departamentoId });
   return prisma.categoria.create({ data: { ...data, empresaId }, select: SELECT });
 }
 
 export async function update({ empresaId, id, data }) {
   await getById({ empresaId, id });
-  if (data.departamentoId) {
-    await ensureDepartamento({ empresaId, departamentoId: data.departamentoId });
-  }
   return prisma.categoria.update({ where: { id }, data, select: SELECT });
 }
 

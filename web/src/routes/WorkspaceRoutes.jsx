@@ -31,6 +31,8 @@ import { PreviaEstoquePage } from "../features/estoque/previaEstoque/PreviaEstoq
 import { RastreabilidadePage } from "../features/estoque/rastreabilidade/RastreabilidadePage.jsx";
 import { RecebimentoPage } from "../features/estoque/recebimento/RecebimentoPage.jsx";
 import { CaixaPage } from "../features/financeiro/caixa/CaixaPage.jsx";
+import { FluxoCaixaPage } from "../features/financeiro/fluxoCaixa/FluxoCaixaPage.jsx";
+import { ConfiguracaoFinanceiraPage } from "../features/financeiro/configuracao/ConfiguracaoFinanceiraPage.jsx";
 import { CentrosCustoPage } from "../features/financeiro/centrosCusto/CentrosCustoPage.jsx";
 import { ChequesEmitidosPage } from "../features/financeiro/chequesEmitidos/ChequesEmitidosPage.jsx";
 import { ChequesTerceirosPage } from "../features/financeiro/chequesTerceiros/ChequesTerceirosPage.jsx";
@@ -45,15 +47,22 @@ import { NotaFiscalDetailPage } from "../features/fiscal/notasFiscais/NotaFiscal
 import { NotasFiscaisPage } from "../features/fiscal/notasFiscais/NotasFiscaisPage.jsx";
 import { NovaNotaFiscalPage } from "../features/fiscal/notasFiscais/NovaNotaFiscalPage.jsx";
 import { TributacaoProdutoPage } from "../features/fiscal/tributacaoProduto/TributacaoProdutoPage.jsx";
+import { UtilitariosFiscaisPage } from "../features/fiscal/utilitarios/UtilitariosFiscaisPage.jsx";
+import { ConfiguracaoFiscalPage } from "../features/fiscal/configuracoes/ConfiguracaoFiscalPage.jsx";
+import { ItensNotaFiscalPage } from "../features/fiscal/itensNotaFiscal/ItensNotaFiscalPage.jsx";
 import { ClientesPage } from "../features/participantes/clientes/ClientesPage.jsx";
 import { ColaboradoresPage } from "../features/participantes/colaboradores/ColaboradoresPage.jsx";
+import { FornecedoresPage } from "../features/participantes/fornecedores/FornecedoresPage.jsx";
 import { GruposEmpresasPage } from "../features/participantes/gruposEmpresas/GruposEmpresasPage.jsx";
 import { ParticipantesPage } from "../features/participantes/participantes/ParticipantesPage.jsx";
 import { RotasEntregaPage } from "../features/participantes/rotasEntrega/RotasEntregaPage.jsx";
 import { TransportadorasPage } from "../features/participantes/transportadoras/TransportadorasPage.jsx";
 import { RelatoriosPage } from "../features/gerenciais/relatorios/RelatoriosPage.jsx";
+import { AnalyticsPage } from "../features/gerenciais/analytics/AnalyticsPage.jsx";
+import { DashboardGerencialPage } from "../features/gerenciais/dashboardGerencial/DashboardGerencialPage.jsx";
 import { AssinaturaPage } from "../features/sistema/assinatura/AssinaturaPage.jsx";
 import { ControleAcessoPage } from "../features/sistema/controleAcesso/ControleAcessoPage.jsx";
+import { MinhaEmpresaPage } from "../features/sistema/minhaEmpresa/MinhaEmpresaPage.jsx";
 import { DevolucoesPage } from "../features/vendas/devolucoes/DevolucoesPage.jsx";
 import { FaturarPedidoVendaPage } from "../features/vendas/FaturarPedidoVendaPage.jsx";
 import { ItensVendaPage } from "../features/vendas/itensVenda/ItensVendaPage.jsx";
@@ -141,6 +150,7 @@ export function WorkspaceRoutes() {
 
       <Route path="/participantes" element={<ParticipantesPage />} />
       <Route path="/participantes/clientes" element={<ClientesPage />} />
+      <Route path="/participantes/fornecedores" element={<FornecedoresPage />} />
       <Route path="/participantes/grupos-empresas" element={<GruposEmpresasPage />} />
       <Route path="/participantes/transportadoras" element={<TransportadorasPage />} />
       <Route path="/participantes/rotas-entrega" element={<RotasEntregaPage />} />
@@ -155,6 +165,8 @@ export function WorkspaceRoutes() {
       <Route path="/financeiro/titulos/baixa" element={<BaixaTitulosPage />} />
       <Route path="/financeiro/titulos/:id" element={<TituloDetailPage />} />
       <Route path="/financeiro/caixa" element={<CaixaPage />} />
+      <Route path="/financeiro/fluxo-caixa" element={<FluxoCaixaPage />} />
+      <Route path="/financeiro/configuracao" element={<ConfiguracaoFinanceiraPage />} />
       <Route path="/financeiro/contas-bancarias" element={<ContasBancariasPage />} />
       <Route path="/financeiro/plano-contas" element={<PlanoContasPage />} />
       <Route path="/financeiro/centros-custo" element={<CentrosCustoPage />} />
@@ -168,9 +180,15 @@ export function WorkspaceRoutes() {
       <Route path="/fiscal/certificados-digitais" element={<CertificadosDigitaisPage />} />
       <Route path="/fiscal/cfop" element={<CfopPage />} />
       <Route path="/fiscal/tributacao-produto" element={<TributacaoProdutoPage />} />
+      <Route path="/fiscal/utilitarios" element={<UtilitariosFiscaisPage />} />
+      <Route path="/fiscal/configuracoes" element={<ConfiguracaoFiscalPage />} />
+      <Route path="/fiscal/itens-nota" element={<ItensNotaFiscalPage />} />
 
       <Route path="/relatorios" element={<RelatoriosPage />} />
+      <Route path="/gerenciais/analytics" element={<AnalyticsPage />} />
+      <Route path="/gerenciais/dashboard" element={<DashboardGerencialPage />} />
       <Route path="/sistema/controle-acesso" element={<ControleAcessoPage />} />
+      <Route path="/sistema/minha-empresa" element={<MinhaEmpresaPage />} />
       <Route path="/sistema/assinatura" element={<AssinaturaPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

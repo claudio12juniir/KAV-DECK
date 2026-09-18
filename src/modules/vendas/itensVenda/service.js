@@ -52,7 +52,7 @@ function buildWhere({
   const produtoWhere = {};
   if (produtoTexto) produtoWhere.descricao = { contains: produtoTexto, mode: "insensitive" };
   if (categoriaId) produtoWhere.categoriaId = categoriaId;
-  if (departamentoId) produtoWhere.categoria = { departamentoId };
+  if (departamentoId) produtoWhere.departamentoId = departamentoId;
 
   const pedidoWhere = {
     empresaId,

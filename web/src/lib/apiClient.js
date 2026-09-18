@@ -87,9 +87,54 @@ async function request(path, { method = "GET", body, query } = {}) {
   return payload;
 }
 
+// Downloads binários (ZIP de XML, futuro XLS) não passam por `request` —
+// aquela função sempre espera JSON de volta. Aqui a resposta vira um Blob e
+// o navegador baixa via um <a download> temporário.
+async function downloadBlob(path, query, nomeArquivoFallback) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const url = new URL(`${BASE_URL}${path}`, window.location.origin);
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null && value !== "") {
+        url.searchParams.set(key, value);
+      }
+    }
+  }
+
+  const response = await fetch(url, {
+    headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new ApiError({
+      status: response.status,
+      code: payload?.error?.code ?? "UNKNOWN_ERROR",
+      message: payload?.error?.message ?? "Não foi possível baixar o arquivo.",
+    });
+  }
+
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const nomeArquivo = disposition.match(/filename="?([^"]+)"?/)?.[1] ?? nomeArquivoFallback;
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = nomeArquivo;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
 export const apiClient = {
   get: (path, query) => request(path, { method: "GET", query }),
   post: (path, body) => request(path, { method: "POST", body }),
   patch: (path, body) => request(path, { method: "PATCH", body }),
   delete: (path) => request(path, { method: "DELETE" }),
+  downloadBlob,
 };

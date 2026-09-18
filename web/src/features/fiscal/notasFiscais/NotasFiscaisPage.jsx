@@ -5,7 +5,7 @@ import { Select } from "../../../components/ui/Select.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
-import { listNotasFiscais } from "./api.js";
+import { downloadXmlLote, listNotasFiscais } from "./api.js";
 import { StatusNotaBadge } from "./StatusNotaBadge.jsx";
 
 const TIPO_LABEL = {
@@ -24,6 +24,8 @@ export function NotasFiscaisPage() {
   const [tipoOperacao, setTipoOperacao] = useState("");
   const [status, setStatus] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selecionadas, setSelecionadas] = useState(() => new Set());
+  const [baixando, setBaixando] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -44,7 +46,39 @@ export function NotasFiscaisPage() {
 
   useRealtimeInvalidate("/fiscal/notas", () => setRefreshKey((k) => k + 1));
 
+  function alternarSelecao(id) {
+    setSelecionadas((prev) => {
+      const proximo = new Set(prev);
+      if (proximo.has(id)) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
+  }
+
+  async function handleBaixarXmlLote() {
+    setBaixando(true);
+    try {
+      await downloadXmlLote([...selecionadas]);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível baixar o XML em lote.");
+    } finally {
+      setBaixando(false);
+    }
+  }
+
   const columns = [
+    {
+      key: "_selecionar",
+      label: "",
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selecionadas.has(row.id)}
+          onClick={(e) => e.stopPropagation()}
+          onChange={() => alternarSelecao(row.id)}
+        />
+      ),
+    },
     { key: "serieNumero", label: "Nota", render: (row) => `${row.serie}/${row.numero}` },
     { key: "participante", label: "Participante", render: (row) => row.participante.razaoSocial },
     { key: "tipoOperacao", label: "Tipo", render: (row) => TIPO_LABEL[row.tipoOperacao] ?? row.tipoOperacao },
@@ -58,9 +92,16 @@ export function NotasFiscaisPage() {
           <h1>Notas fiscais</h1>
           <p>Ciclo de digitação até autorização (a transmissão real à SEFAZ ainda não está integrada).</p>
         </div>
-        <Link to="/fiscal/notas/nova">
-          <Button>Nova nota</Button>
-        </Link>
+        <div style={{ display: "flex", gap: "12px" }}>
+          {selecionadas.size > 0 && (
+            <Button variant="secondary" loading={baixando} onClick={handleBaixarXmlLote}>
+              Baixar XML ({selecionadas.size})
+            </Button>
+          )}
+          <Link to="/fiscal/notas/nova">
+            <Button>Nova nota</Button>
+          </Link>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "24px" }}>
