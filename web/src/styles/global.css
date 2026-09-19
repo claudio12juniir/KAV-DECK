@@ -10,6 +10,10 @@ body,
   height: 100%;
 }
 
+html {
+  overscroll-behavior-y: contain;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -18,6 +22,7 @@ body {
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
 }
 
 h1,

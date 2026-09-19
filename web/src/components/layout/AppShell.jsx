@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FiDollarSign, FiHome, FiPackage, FiShoppingCart, FiTruck } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CardNavMenu } from "../effects/CardNavMenu.jsx";
@@ -202,22 +202,36 @@ export function AppShell() {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
 
-  const navGroups = PAPEIS_COM_ACESSO_SISTEMA.includes(me?.role)
-    ? [
-        ...NAV_GROUPS,
-        { label: "Relatórios", to: "/relatorios" },
-        { label: "Analytics", to: "/gerenciais/analytics" },
-        { label: "Dashboard Gerencial", to: "/gerenciais/dashboard" },
-        {
-          label: "Sistema",
-          items: [
-            { to: "/sistema/minha-empresa", label: "Minha Empresa" },
-            { to: "/sistema/controle-acesso", label: "Controle de Acesso" },
-            { to: "/sistema/assinatura", label: "Assinatura" },
-          ],
-        },
-      ]
-    : NAV_GROUPS;
+  // Memoizado por referência: cada render de AppShell (toda navegação de
+  // rota, todo scroll) recriava esse array na hora — o CardNavMenu usa
+  // `groups` como dependência do useLayoutEffect que monta a timeline do
+  // GSAP, então uma referência nova a cada render matava e recriava a
+  // animação o tempo todo. Resultado visível: o menu mobile fechava de
+  // supetão (gsap.set colapsando pra 56px sem transição) toda vez que o
+  // usuário tocava num link, mesmo com o toggleMenu() já tocando o reverse
+  // suave — a navegação subsequente interrompia a animação no meio.
+  const podeVerSistema = PAPEIS_COM_ACESSO_SISTEMA.includes(me?.role);
+  const navGroups = useMemo(
+    () =>
+      podeVerSistema
+        ? [
+            ...NAV_GROUPS,
+            { label: "Relatórios", to: "/relatorios" },
+            { label: "Analytics", to: "/gerenciais/analytics" },
+            { label: "Dashboard Gerencial", to: "/gerenciais/dashboard" },
+            {
+              label: "Sistema",
+              items: [
+                { to: "/sistema/minha-empresa", label: "Minha Empresa" },
+                { to: "/sistema/controle-acesso", label: "Controle de Acesso" },
+                { to: "/sistema/assinatura", label: "Assinatura" },
+              ],
+            },
+          ]
+        : NAV_GROUPS,
+    [podeVerSistema],
+  );
+  const mobileGroups = useMemo(() => toMobileGroups(navGroups), [navGroups]);
 
   useEffect(() => {
     function onScroll() {
@@ -259,7 +273,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <CardNavMenu groups={toMobileGroups(navGroups)} onNavegar={navigate} />
+      <CardNavMenu groups={mobileGroups} onNavegar={navigate} />
 
       <main className="app-content container">
         <WorkspaceRoutes />

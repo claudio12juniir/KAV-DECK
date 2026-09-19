@@ -47,6 +47,11 @@ export function CardNavMenu({ brand = "KAV DECK", groups, onNavegar, ease = "pow
   useLayoutEffect(() => {
     const tl = createTimeline();
     tlRef.current = tl;
+    // Se `groups` mudar com o menu já aberto (ex.: papel do usuário mudou
+    // no meio da sessão), reabre instantaneamente na altura nova em vez de
+    // deixar a timeline recém-criada no estado fechado — sem isso o menu
+    // pareceria ter fechado sozinho.
+    if (isOpen) tl?.progress(1);
     return () => {
       tl?.kill();
       tlRef.current = null;
