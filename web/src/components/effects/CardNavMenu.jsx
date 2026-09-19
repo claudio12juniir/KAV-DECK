@@ -5,7 +5,7 @@ import "./CardNavMenu.css";
 
 const TONES = ["mono", "accent", "mono"];
 
-export function CardNavMenu({ brand = "KAV DECK", groups, onNavegar, ease = "power3.out" }) {
+export function CardNavMenu({ brand = "KAV DECK", groups, onNavegar, onSignOut, ease = "power3.out" }) {
   const [isOpen, setIsOpen] = useState(false);
   const navRef = useRef(null);
   const cardsRef = useRef([]);
@@ -90,7 +90,13 @@ export function CardNavMenu({ brand = "KAV DECK", groups, onNavegar, ease = "pow
             <span />
           </button>
           <div className="card-nav-brand">{brand}</div>
-          <span className="card-nav-spacer" aria-hidden="true" />
+          {onSignOut ? (
+            <button type="button" className="card-nav-sair" onClick={onSignOut}>
+              Sair
+            </button>
+          ) : (
+            <span className="card-nav-spacer" aria-hidden="true" />
+          )}
         </div>
 
         <div className="card-nav-content" aria-hidden={!isOpen}>

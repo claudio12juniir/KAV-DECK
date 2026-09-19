@@ -183,7 +183,13 @@
 }
 
 @media (max-width: 780px) {
-  .app-nav {
+  /* .app-topbar inteira some (não só .app-nav) — ela é "position: sticky;
+     top: 0" igual o .card-nav-container do menu mobile logo abaixo dela;
+     as duas grudadas no mesmo topo faziam a barra preta e o menu
+     hambúrguer se sobreporem ao rolar a tela. O menu mobile já cobre tudo
+     que a topbar oferecia (marca + navegação); "Sair" foi pro próprio
+     CardNavMenu (ver card-nav-sair). */
+  .app-topbar {
     display: none;
   }
   .app-content.container {

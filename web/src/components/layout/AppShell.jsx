@@ -273,7 +273,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <CardNavMenu groups={mobileGroups} onNavegar={navigate} />
+      <CardNavMenu groups={mobileGroups} onNavegar={navigate} onSignOut={signOut} />
 
       <main className="app-content container">
         <WorkspaceRoutes />

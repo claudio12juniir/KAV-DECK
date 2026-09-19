@@ -83,6 +83,24 @@
   width: 24px;
 }
 
+.card-nav-sair {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  padding: var(--space-2) var(--space-1);
+  margin-right: -6px;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card-nav-sair:active {
+  color: var(--color-accent);
+}
+
 .card-nav-content {
   position: absolute;
   left: 0;
