@@ -125,9 +125,7 @@
 }
 
 .app-nav-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
+  position: fixed;
   min-width: 220px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);

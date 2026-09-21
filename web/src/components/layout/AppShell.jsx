@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   FiChevronDown,
   FiDollarSign,
@@ -159,17 +160,51 @@ function iniciais(nome) {
 // group.to (item de nível único, ex: "Início") ou group.items (dropdown)
 // navegam pra URL real via useNavigate — cada clique troca a página como em
 // qualquer app com rota endereçável (ver App.jsx).
+//
+// O dropdown é renderizado via portal em document.body, posicionado com
+// `position: fixed` a partir do getBoundingClientRect do próprio botão. Não
+// dá pra deixá-lo como filho normal de .app-nav-group: esse elemento vive
+// dentro de .app-nav-scroll, que tem overflow-x:auto — e por regra do CSS
+// (11.1.1), overflow-x diferente de "visible" força overflow-y a virar
+// "auto" também, mesmo sem declarar. Isso corta silenciosamente qualquer
+// dropdown position:absolute que "vaze" pra baixo da faixa de navegação —
+// era exatamente o motivo dos sub-itens não aparecerem ao clicar.
 function NavGroup({ group, pathAtual, onNavegar }) {
   const [aberto, setAberto] = useState(false);
-  const ref = useRef(null);
+  const [pos, setPos] = useState(null);
+  const groupRef = useRef(null);
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  function abrir() {
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 8, left: rect.left, minWidth: rect.width });
+    setAberto(true);
+  }
+
+  function fechar() {
+    setAberto(false);
+  }
 
   useEffect(() => {
     if (!aberto) return undefined;
+
     function aoClicarFora(e) {
-      if (ref.current && !ref.current.contains(e.target)) setAberto(false);
+      if (groupRef.current?.contains(e.target)) return;
+      if (dropdownRef.current?.contains(e.target)) return;
+      fechar();
     }
+    // capture:true pra pegar scroll de qualquer ancestral rolável (ex.: a
+    // própria .app-nav-scroll) — scroll não faz bubble, só é visível na fase
+    // de captura conforme desce até o alvo.
     document.addEventListener("mousedown", aoClicarFora);
-    return () => document.removeEventListener("mousedown", aoClicarFora);
+    document.addEventListener("scroll", fechar, true);
+    window.addEventListener("resize", fechar);
+    return () => {
+      document.removeEventListener("mousedown", aoClicarFora);
+      document.removeEventListener("scroll", fechar, true);
+      window.removeEventListener("resize", fechar);
+    };
   }, [aberto]);
 
   if (group.to) {
@@ -185,33 +220,41 @@ function NavGroup({ group, pathAtual, onNavegar }) {
   }
 
   return (
-    <div className="app-nav-group" ref={ref}>
+    <div className="app-nav-group" ref={groupRef}>
       <button
         type="button"
+        ref={triggerRef}
         className={`app-nav-link app-nav-group-trigger ${aberto ? "is-active" : ""}`}
-        onClick={() => setAberto((v) => !v)}
+        onClick={() => (aberto ? fechar() : abrir())}
         aria-expanded={aberto}
       >
         {group.label}
         <FiChevronDown className={`app-nav-caret ${aberto ? "is-open" : ""}`} />
       </button>
-      {aberto && (
-        <div className="app-nav-dropdown">
-          {group.items.map((item) => (
-            <button
-              type="button"
-              key={item.to}
-              className={`app-nav-dropdown-link ${ehAtivo(pathAtual, item.to, item.end) ? "is-active" : ""}`}
-              onClick={() => {
-                setAberto(false);
-                onNavegar(item.to);
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {aberto &&
+        pos &&
+        createPortal(
+          <div
+            className="app-nav-dropdown"
+            ref={dropdownRef}
+            style={{ top: pos.top, left: pos.left, minWidth: Math.max(pos.minWidth, 220) }}
+          >
+            {group.items.map((item) => (
+              <button
+                type="button"
+                key={item.to}
+                className={`app-nav-dropdown-link ${ehAtivo(pathAtual, item.to, item.end) ? "is-active" : ""}`}
+                onClick={() => {
+                  fechar();
+                  onNavegar(item.to);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
