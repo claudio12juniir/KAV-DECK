@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { HistoricoModal } from "../../../components/audit/Historico.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Modal } from "../../../components/ui/Modal.jsx";
@@ -7,7 +8,10 @@ import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { fecharInventario, getInventario } from "./api.js";
+
+const ENTIDADE = "inventario-fisico";
 
 export function InventarioDetailPage() {
   const { id } = useParams();
@@ -17,6 +21,9 @@ export function InventarioDetailPage() {
   const [erroCarregar, setErroCarregar] = useState("");
   const [confirmarFechamento, setConfirmarFechamento] = useState(false);
   const [fechando, setFechando] = useState(false);
+  const [auditoriaAberta, setAuditoriaAberta] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
 
   async function carregar() {
     setCarregando(true);
@@ -36,6 +43,19 @@ export function InventarioDetailPage() {
   }, [id]);
 
   useRealtimeInvalidate("/estoque/inventarios", carregar);
+
+  async function abrirAuditoria() {
+    setAuditoriaAberta(true);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list(ENTIDADE, id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar a auditoria.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   async function handleFechar() {
     setFechando(true);
@@ -106,6 +126,9 @@ export function InventarioDetailPage() {
           <Button variant="ghost" onClick={() => setConfirmarFechamento(true)}>
             Finalizar
           </Button>
+          <Button variant="ghost" onClick={abrirAuditoria}>
+            Auditoria
+          </Button>
           <Link to="/estoque/inventarios">
             <Button variant="ghost">Histórico</Button>
           </Link>
@@ -135,6 +158,14 @@ export function InventarioDetailPage() {
         Isso gera ajustes reais de estoque para as diferenças entre a contagem e o sistema. Essa ação não pode ser
         desfeita.
       </Modal>
+
+      <HistoricoModal
+        open={auditoriaAberta}
+        onClose={() => setAuditoriaAberta(false)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ status: "Status", ajustesAplicados: "Ajustes aplicados" }}
+      />
     </div>
   );
 }
