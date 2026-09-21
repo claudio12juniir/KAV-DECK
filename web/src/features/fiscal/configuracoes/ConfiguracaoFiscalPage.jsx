@@ -1,11 +1,30 @@
 import { useEffect, useState } from "react";
+import { HistoricoModal } from "../../../components/audit/Historico.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
 import { Select } from "../../../components/ui/Select.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { configuracaoFiscalApi } from "./api.js";
+
+const FIELD_LABELS = {
+  ambiente: "Ambiente",
+  serieNfePadrao: "Série NF-e padrão",
+  serieNfcePadrao: "Série NFC-e padrão",
+  cscId: "CSC ID (NFC-e)",
+  regimeTributario: "Regime tributário",
+  inscricaoEstadual: "Inscrição estadual",
+  enderecoLogradouro: "Logradouro",
+  enderecoNumero: "Número",
+  enderecoComplemento: "Complemento",
+  enderecoBairro: "Bairro",
+  enderecoCep: "CEP",
+  enderecoUf: "UF",
+  enderecoCidadeCodigoIbge: "Código IBGE do município",
+  enderecoCidadeNome: "Nome do município",
+};
 
 const VAZIO = {
   ambiente: "HOMOLOGACAO",
@@ -33,6 +52,22 @@ export function ConfiguracaoFiscalPage() {
   const [form, setForm] = useState(VAZIO);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [historicoAberto, setHistoricoAberto] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  async function abrirHistorico() {
+    setHistoricoAberto(true);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("configuracao-fiscal", configuracao.id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   useEffect(() => {
     configuracaoFiscalApi
@@ -97,8 +132,17 @@ export function ConfiguracaoFiscalPage() {
 
   return (
     <div>
-      <h1>Configurações Fiscais</h1>
-      <p>Numeração de documentos e provisionamento na NFe.io — necessário para emitir NF-e/NFC-e reais.</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", flexWrap: "wrap" }}>
+        <div>
+          <h1>Configurações Fiscais</h1>
+          <p>Numeração de documentos e provisionamento na NFe.io — necessário para emitir NF-e/NFC-e reais.</p>
+        </div>
+        {configuracao.id && (
+          <Button variant="ghost" onClick={abrirHistorico}>
+            Histórico
+          </Button>
+        )}
+      </div>
 
       <div style={{ display: "flex", gap: "12px", margin: "16px 0" }}>
         <Badge tone={configuracao.nfeioCompanyId ? "success" : "neutral"}>
@@ -209,6 +253,14 @@ export function ConfiguracaoFiscalPage() {
           Salvar
         </Button>
       </form>
+
+      <HistoricoModal
+        open={historicoAberto}
+        onClose={() => setHistoricoAberto(false)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={FIELD_LABELS}
+      />
     </div>
   );
 }

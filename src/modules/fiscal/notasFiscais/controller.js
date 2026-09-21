@@ -1,9 +1,12 @@
 import archiver from "archiver";
+import { auditarAtualizacao, auditarCriacao } from "../../../lib/auditLog.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { buildPaginatedResult, parsePagination } from "../../../utils/pagination.js";
 import * as transmissaoSefazService from "../transmissaoSefaz/service.js";
 import * as service from "./service.js";
 import { gerarXmlNota, nomeArquivoXml } from "./xml.js";
+
+const ENTIDADE = "nota-fiscal";
 
 export const list = asyncHandler(async (req, res) => {
   const { skip, take, page, pageSize } = parsePagination(req.query);
@@ -26,6 +29,13 @@ export const getById = asyncHandler(async (req, res) => {
 
 export const create = asyncHandler(async (req, res) => {
   const nota = await service.create({ empresaId: req.user.empresaId, data: req.body });
+  await auditarCriacao({
+    empresaId: req.user.empresaId,
+    entidade: ENTIDADE,
+    entidadeId: nota.id,
+    usuarioId: req.user.id,
+    registro: nota,
+  });
   res.status(201).json(nota);
 });
 
@@ -48,11 +58,20 @@ export const removeItem = asyncHandler(async (req, res) => {
 });
 
 export const updateStatus = asyncHandler(async (req, res) => {
+  const antes = await service.getById({ empresaId: req.user.empresaId, id: req.params.id });
   const nota = await service.updateStatus({
     empresaId: req.user.empresaId,
     id: req.params.id,
     status: req.body.status,
     chaveAcesso: req.body.chaveAcesso,
+  });
+  await auditarAtualizacao({
+    empresaId: req.user.empresaId,
+    entidade: ENTIDADE,
+    entidadeId: nota.id,
+    usuarioId: req.user.id,
+    antes,
+    depois: nota,
   });
   res.json(nota);
 });

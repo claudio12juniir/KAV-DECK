@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { HistoricoModal, UltimaEdicaoCelula, useUltimasEdicoes } from "../../../components/audit/Historico.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Select } from "../../../components/ui/Select.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { downloadXmlLote, listNotasFiscais } from "./api.js";
 import { StatusNotaBadge } from "./StatusNotaBadge.jsx";
 
@@ -26,6 +28,25 @@ export function NotasFiscaisPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selecionadas, setSelecionadas] = useState(() => new Set());
   const [baixando, setBaixando] = useState(false);
+  const [verLogsDe, setVerLogsDe] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  const idsVisiveis = useMemo(() => notas.map((n) => n.id), [notas]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("nota-fiscal", idsVisiveis);
+
+  async function abrirLogs(id) {
+    setVerLogsDe(id);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("nota-fiscal", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   useEffect(() => {
     let ativo = true;
@@ -83,6 +104,19 @@ export function NotasFiscaisPage() {
     { key: "participante", label: "Participante", render: (row) => row.participante.razaoSocial },
     { key: "tipoOperacao", label: "Tipo", render: (row) => TIPO_LABEL[row.tipoOperacao] ?? row.tipoOperacao },
     { key: "status", label: "Status", render: (row) => <StatusNotaBadge status={row.status} /> },
+    {
+      key: "_ultimaEdicao",
+      label: "Última edição",
+      render: (row) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <UltimaEdicaoCelula
+            info={ultimasEdicoes[row.id]}
+            carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined}
+            onClick={() => abrirLogs(row.id)}
+          />
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -134,6 +168,14 @@ export function NotasFiscaisPage() {
         loading={carregando}
         onRowClick={(row) => navigate(`/fiscal/notas/${row.id}`)}
         emptyMessage="Nenhuma nota fiscal encontrada."
+      />
+
+      <HistoricoModal
+        open={Boolean(verLogsDe)}
+        onClose={() => setVerLogsDe(null)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ status: "Status", chaveAcesso: "Chave de acesso" }}
       />
     </div>
   );

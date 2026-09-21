@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { HistoricoModal } from "../../../components/audit/Historico.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -8,6 +9,7 @@ import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { addManifestacao, getNotaFiscal, updateNotaFiscalStatus } from "./api.js";
 import { StatusNotaBadge } from "./StatusNotaBadge.jsx";
 
@@ -53,6 +55,22 @@ export function NotaFiscalDetailPage() {
   const [modalAutorizar, setModalAutorizar] = useState(false);
   const [chaveAcesso, setChaveAcesso] = useState("");
   const [manifestandoTipo, setManifestandoTipo] = useState(null);
+  const [historicoAberto, setHistoricoAberto] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  async function abrirHistorico() {
+    setHistoricoAberto(true);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("nota-fiscal", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   async function carregar() {
     setCarregando(true);
@@ -135,7 +153,12 @@ export function NotaFiscalDetailPage() {
           </h1>
           <p>{nota.participante.razaoSocial}</p>
         </div>
-        <StatusNotaBadge status={nota.status} />
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <StatusNotaBadge status={nota.status} />
+          <Button variant="ghost" onClick={abrirHistorico}>
+            Histórico
+          </Button>
+        </div>
       </div>
 
       <Card style={{ marginBottom: "24px" }}>
@@ -208,6 +231,14 @@ export function NotaFiscalDetailPage() {
           onChange={(e) => setChaveAcesso(e.target.value.replace(/\D/g, ""))}
         />
       </Modal>
+
+      <HistoricoModal
+        open={historicoAberto}
+        onClose={() => setHistoricoAberto(false)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ status: "Status", chaveAcesso: "Chave de acesso" }}
+      />
     </div>
   );
 }
