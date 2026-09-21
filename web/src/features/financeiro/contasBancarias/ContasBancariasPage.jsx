@@ -14,6 +14,7 @@ export function ContasBancariasPage() {
       description="Usadas em cheques emitidos e movimentos de caixa."
       api={contasBancariasApi}
       resource="/financeiro/contas-bancarias"
+      entidade="conta-bancaria"
       fields={fields}
     />
   );

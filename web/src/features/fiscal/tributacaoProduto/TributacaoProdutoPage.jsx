@@ -42,6 +42,7 @@ export function TributacaoProdutoPage() {
       description="Vincula cada produto, por CFOP, às regras de ICMS/IPI/PIS/COFINS usadas no cálculo automático da NF-e."
       api={tributacaoProdutoApi}
       resource="/fiscal/tributacao-produto"
+      entidade="tributacao-produto"
       fields={fields}
       columns={columns}
     />

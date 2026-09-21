@@ -13,6 +13,7 @@ export function CertificadosDigitaisPage() {
       description="Cadastro do certificado A1 usado na assinatura das notas fiscais. Sem exposição de conteúdo/senha."
       api={certificadosDigitaisApi}
       resource="/fiscal/certificados-digitais"
+      entidade="certificado-digital"
       fields={fields}
     />
   );

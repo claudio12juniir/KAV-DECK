@@ -15,6 +15,7 @@ export function PlanoContasPage() {
       description="Estrutura hierárquica usada nos relatórios financeiros."
       api={planoContasApi}
       resource="/financeiro/plano-contas"
+      entidade="plano-conta"
       fields={fields}
     />
   );

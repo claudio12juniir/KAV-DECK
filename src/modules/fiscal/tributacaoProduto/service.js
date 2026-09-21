@@ -65,7 +65,7 @@ export async function list({ empresaId, produtoId }) {
   return prisma.tributacaoProdutoCfop.findMany({ where, select: SELECT, orderBy: { cfop: { codigo: "asc" } } });
 }
 
-async function getOrThrow({ empresaId, id }) {
+export async function getById({ empresaId, id }) {
   const item = await prisma.tributacaoProdutoCfop.findFirst({ where: { id, empresaId }, select: SELECT });
   if (!item) throw new AppError(404, "NOT_FOUND", "Tributação de produto não encontrada.");
   return item;
@@ -84,12 +84,12 @@ export async function create({ empresaId, data }) {
 }
 
 export async function update({ empresaId, id, data }) {
-  const existente = await getOrThrow({ empresaId, id });
+  const existente = await getById({ empresaId, id });
   await ensureReferences({ empresaId, produtoId: existente.produtoId, cfopId: existente.cfopId, ...data });
   return prisma.tributacaoProdutoCfop.update({ where: { id }, data, select: SELECT });
 }
 
 export async function remove({ empresaId, id }) {
-  await getOrThrow({ empresaId, id });
+  await getById({ empresaId, id });
   await prisma.tributacaoProdutoCfop.delete({ where: { id } });
 }
