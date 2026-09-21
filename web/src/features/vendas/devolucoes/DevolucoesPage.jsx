@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { UltimaEdicaoCelula, useUltimasEdicoes } from "../../../components/audit/Historico.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -107,8 +108,18 @@ export function DevolucoesPage() {
 
   const valorDasDevolucoes = devolucoes.reduce((soma, d) => soma + d.valorDevolucao, 0);
 
+  const ids = useMemo(() => devolucoes.map((d) => d.id), [devolucoes]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("devolucao-venda", ids);
+
   const columns = [
     { key: "_indice", label: "#", render: (_row, index) => index + 1 },
+    {
+      key: "_registradoPor",
+      label: "Registrado por",
+      render: (row) => (
+        <UltimaEdicaoCelula info={ultimasEdicoes[row.id]} carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined} />
+      ),
+    },
     { key: "dataDev", label: "Data da dev.", render: (row) => formatarData(row.data) },
     { key: "valorDev", label: "Valor da dev.", render: (row) => formatarMoeda(row.valorDevolucao) },
     { key: "numeroPed", label: "Número ped.", render: (row) => <Link to={`/vendas/${row.pedidoVendaId}`}>{row.pedidoVendaId.slice(0, 8)}</Link> },

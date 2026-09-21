@@ -37,6 +37,16 @@ export async function list({ empresaId, skip, take, fornecedorId, produtoId }) {
   return { items, total };
 }
 
+// Usado só pra auditoria (ver controller.js) saber se um upsert foi criação
+// ou atualização, e capturar o "antes" do diff — não interfere no upsert em
+// si.
+export async function getByChave({ empresaId, fornecedorId, produtoId }) {
+  return prisma.precoCompra.findFirst({
+    where: { empresaId, fornecedorId, produtoId },
+    select: SELECT,
+  });
+}
+
 // upsert: "Terminal de Preços" é sempre o valor vigente por fornecedor+produto,
 // não um histórico — lançar de novo simplesmente atualiza o preço e a data
 // de vigência.

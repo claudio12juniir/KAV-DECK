@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiRefreshCw } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import { UltimaEdicaoCelula, useUltimasEdicoes } from "../../../components/audit/Historico.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -115,8 +116,18 @@ export function OcorrenciasPage() {
     }
   }
 
+  const ids = useMemo(() => ocorrencias.map((o) => o.id), [ocorrencias]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("ocorrencia", ids);
+
   const columns = [
     { key: "_indice", label: "#", render: (_row, index) => index + 1 },
+    {
+      key: "_registradoPor",
+      label: "Registrado por",
+      render: (row) => (
+        <UltimaEdicaoCelula info={ultimasEdicoes[row.id]} carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined} />
+      ),
+    },
     { key: "data", label: "Data oc.", render: (row) => formatarData(row.data) },
     {
       key: "pedido",

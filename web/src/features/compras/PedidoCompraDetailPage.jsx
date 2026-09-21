@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiEdit2 } from "react-icons/fi";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { HistoricoModal } from "../../components/audit/Historico.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
@@ -10,6 +11,7 @@ import { SkeletonLines } from "../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../components/ui/Table.jsx";
 import { useToast } from "../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../cadastros/logs/api.js";
 import { ProdutoAutocomplete } from "../shared/ProdutoAutocomplete.jsx";
 import {
   addItemPedidoCompra,
@@ -127,6 +129,23 @@ export function PedidoCompraDetailPage() {
   const [transportadoraEditar, setTransportadoraEditar] = useState("");
   const [valorFreteEditar, setValorFreteEditar] = useState("0");
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
+  const [historicoAberto, setHistoricoAberto] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  async function abrirHistorico() {
+    setHistoricoAberto(true);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("pedido-compra", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   async function carregar() {
     if (modoCriacao) {
@@ -419,6 +438,9 @@ export function PedidoCompraDetailPage() {
           <Button variant="ghost" onClick={carregar} disabled={modoCriacao}>
             Atualizar
           </Button>
+          <Button variant="ghost" onClick={abrirHistorico} disabled={modoCriacao}>
+            Histórico
+          </Button>
           <div style={{ position: "relative" }}>
             <Button variant="ghost" onClick={() => setMostrarImprimir((v) => !v)} disabled={modoCriacao}>
               Imprimir ▾
@@ -698,6 +720,14 @@ export function PedidoCompraDetailPage() {
           ))}
         </Select>
       </Modal>
+
+      <HistoricoModal
+        open={historicoAberto}
+        onClose={() => setHistoricoAberto(false)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ status: "Status" }}
+      />
     </div>
   );
 }

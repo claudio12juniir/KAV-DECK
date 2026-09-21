@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { HistoricoModal, UltimaEdicaoCelula, useUltimasEdicoes } from "../../../components/audit/Historico.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { ProdutoAutocomplete } from "../../shared/ProdutoAutocomplete.jsx";
 import { FornecedorAutocomplete } from "../components/FornecedorAutocomplete.jsx";
 import { precosCompraApi } from "./api.js";
@@ -26,6 +28,9 @@ export function PrecosCompraPage() {
   const [preco, setPreco] = useState("0");
   const [salvando, setSalvando] = useState(false);
   const [removendoId, setRemovendoId] = useState(null);
+  const [verLogsDe, setVerLogsDe] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
 
   async function carregar() {
     setCarregando(true);
@@ -80,11 +85,38 @@ export function PrecosCompraPage() {
     }
   }
 
+  const ids = useMemo(() => precos.map((p) => p.id), [precos]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("preco-compra", ids);
+
+  async function abrirLogs(id) {
+    setVerLogsDe(id);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("preco-compra", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
+
   const columns = [
     { key: "fornecedor", label: "Fornecedor", render: (row) => row.fornecedor.participante.razaoSocial },
     { key: "produto", label: "Produto", render: (row) => `${row.produto.codigo} — ${row.produto.descricao}` },
     { key: "preco", label: "Preço vigente", render: (row) => formatarMoeda(row.preco) },
     { key: "vigenciaEm", label: "Vigência desde", render: (row) => formatarData(row.vigenciaEm) },
+    {
+      key: "_ultimaEdicao",
+      label: "Última edição",
+      render: (row) => (
+        <UltimaEdicaoCelula
+          info={ultimasEdicoes[row.id]}
+          carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined}
+          onClick={() => abrirLogs(row.id)}
+        />
+      ),
+    },
     {
       key: "_acoes",
       label: "",
@@ -128,6 +160,14 @@ export function PrecosCompraPage() {
       </Card>
 
       <DataTable columns={columns} rows={precos} loading={carregando} emptyMessage="Nenhum preço de compra cadastrado." />
+
+      <HistoricoModal
+        open={Boolean(verLogsDe)}
+        onClose={() => setVerLogsDe(null)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ preco: "Preço", vigenciaEm: "Vigência" }}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { UltimaEdicaoCelula, useUltimasEdicoes } from "../../components/audit/Historico.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { Modal } from "../../components/ui/Modal.jsx";
@@ -125,6 +126,9 @@ export function PedidosVendaListPage() {
 
   const valorSelecionado = pedidos.filter((p) => selecionados.has(p.id)).reduce((soma, p) => soma + Number(p.valorTotal || 0), 0);
 
+  const ids = useMemo(() => pedidos.map((p) => p.id), [pedidos]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("pedido-venda", ids);
+
   const columns = [
     {
       key: "_check",
@@ -138,6 +142,17 @@ export function PedidosVendaListPage() {
     { key: "dataEmissao", label: "Data", render: (row) => formatarData(row.dataEmissao) },
     { key: "valorTotal", label: "Valor total", render: (row) => formatarMoeda(row.valorTotal) },
     { key: "arquivado", label: "Arquivado", render: (row) => (row.arquivado ? "Sim" : "—") },
+    {
+      key: "_ultimaEdicao",
+      label: "Última edição",
+      render: (row) => (
+        <UltimaEdicaoCelula
+          info={ultimasEdicoes[row.id]}
+          carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined}
+          onClick={() => navigate(`/vendas/${row.id}`)}
+        />
+      ),
+    },
     {
       key: "_acoes",
       label: "",

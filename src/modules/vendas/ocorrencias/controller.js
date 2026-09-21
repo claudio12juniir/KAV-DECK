@@ -1,6 +1,9 @@
+import { auditarCriacao } from "../../../lib/auditLog.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { buildPaginatedResult, parsePagination } from "../../../utils/pagination.js";
 import * as service from "./service.js";
+
+const ENTIDADE = "ocorrencia";
 
 export const list = asyncHandler(async (req, res) => {
   const { skip, take, page, pageSize } = parsePagination(req.query);
@@ -23,6 +26,13 @@ export const getById = asyncHandler(async (req, res) => {
 
 export const create = asyncHandler(async (req, res) => {
   const ocorrencia = await service.create({ empresaId: req.user.empresaId, data: req.body });
+  await auditarCriacao({
+    empresaId: req.user.empresaId,
+    entidade: ENTIDADE,
+    entidadeId: ocorrencia.id,
+    usuarioId: req.user.id,
+    registro: ocorrencia,
+  });
   res.status(201).json(ocorrencia);
 });
 

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { UltimaEdicaoCelula, useUltimasEdicoes } from "../../components/audit/Historico.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Select } from "../../components/ui/Select.jsx";
 import { DataTable } from "../../components/ui/Table.jsx";
@@ -39,11 +40,25 @@ export function PedidosCompraListPage() {
 
   useRealtimeInvalidate("/compras/pedidos", () => setRefreshKey((k) => k + 1));
 
+  const ids = useMemo(() => pedidos.map((p) => p.id), [pedidos]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("pedido-compra", ids);
+
   const columns = [
     { key: "fornecedor", label: "Fornecedor", render: (row) => row.fornecedor.participante.razaoSocial },
     { key: "status", label: "Status", render: (row) => <StatusBadge status={row.status} /> },
     { key: "dataEmissao", label: "Data", render: (row) => formatarData(row.dataEmissao) },
     { key: "arquivado", label: "Arquivado", render: (row) => (row.arquivado ? "Sim" : "—") },
+    {
+      key: "_ultimaEdicao",
+      label: "Última edição",
+      render: (row) => (
+        <UltimaEdicaoCelula
+          info={ultimasEdicoes[row.id]}
+          carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined}
+          onClick={() => navigate(`/compras/${row.id}`)}
+        />
+      ),
+    },
   ];
 
   return (

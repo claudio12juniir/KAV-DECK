@@ -1,5 +1,8 @@
+import { auditarAtualizacao, auditarCriacao } from "../../../lib/auditLog.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import * as service from "./service.js";
+
+const ENTIDADE = "itinerario";
 
 export const consultar = asyncHandler(async (req, res) => {
   const items = await service.consultar({
@@ -20,6 +23,13 @@ export const getById = asyncHandler(async (req, res) => {
 
 export const criar = asyncHandler(async (req, res) => {
   const itinerario = await service.criar({ empresaId: req.user.empresaId, ...req.body });
+  await auditarCriacao({
+    empresaId: req.user.empresaId,
+    entidade: ENTIDADE,
+    entidadeId: itinerario.id,
+    usuarioId: req.user.id,
+    registro: itinerario,
+  });
   res.status(201).json(itinerario);
 });
 
@@ -38,7 +48,16 @@ export const vincularPedido = asyncHandler(async (req, res) => {
 });
 
 export const atualizar = asyncHandler(async (req, res) => {
+  const antes = await service.getById({ empresaId: req.user.empresaId, id: req.params.id });
   const itinerario = await service.atualizar({ empresaId: req.user.empresaId, id: req.params.id, ...req.body });
+  await auditarAtualizacao({
+    empresaId: req.user.empresaId,
+    entidade: ENTIDADE,
+    entidadeId: itinerario.id,
+    usuarioId: req.user.id,
+    antes,
+    depois: itinerario,
+  });
   res.json(itinerario);
 });
 

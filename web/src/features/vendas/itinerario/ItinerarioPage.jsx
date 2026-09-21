@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { HistoricoModal } from "../../../components/audit/Historico.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
 import { Select } from "../../../components/ui/Select.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
+import { logsApi } from "../../cadastros/logs/api.js";
 import {
   atualizarItinerario,
   consultarItinerarios,
@@ -47,6 +49,22 @@ export function ItinerarioPage() {
   const [rotaManual, setRotaManual] = useState("");
   const [placaManual, setPlacaManual] = useState("");
   const [criandoManual, setCriandoManual] = useState(false);
+  const [verLogsDe, setVerLogsDe] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  async function abrirLogs(id) {
+    setVerLogsDe(id);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("itinerario", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   useEffect(() => {
     listRotasEntrega({ pageSize: 100 }).then(({ items }) => setRotas(items));
@@ -252,7 +270,12 @@ export function ItinerarioPage() {
                   </p>
                 </div>
               </div>
-              {it.faturaGerada && <Badge tone="success">Fatura gerada</Badge>}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {it.faturaGerada && <Badge tone="success">Fatura gerada</Badge>}
+                <button type="button" className="autocomplete-trocar" onClick={() => abrirLogs(it.id)}>
+                  Histórico
+                </button>
+              </div>
             </div>
 
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginTop: "12px" }}>
@@ -285,6 +308,14 @@ export function ItinerarioPage() {
             </div>
           </Card>
         ))}
+
+      <HistoricoModal
+        open={Boolean(verLogsDe)}
+        onClose={() => setVerLogsDe(null)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ placaVeiculo: "Placa", valorFrete: "Valor do frete" }}
+      />
     </div>
   );
 }
