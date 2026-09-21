@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { HistoricoModal, UltimaEdicaoCelula, useUltimasEdicoes } from "../../../components/audit/Historico.jsx";
+import { logsApi } from "../../cadastros/logs/api.js";
+import { PARTICIPANTE_FIELD_LABELS } from "../participantes/fieldLabels.js";
 import { atualizarBloqueio, listClientes } from "./api.js";
 
 export function ClientesPage() {
@@ -11,6 +14,9 @@ export function ClientesPage() {
   const [clientes, setClientes] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizandoId, setAtualizandoId] = useState(null);
+  const [verLogsDe, setVerLogsDe] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
 
   async function carregar() {
     setCarregando(true);
@@ -30,6 +36,22 @@ export function ClientesPage() {
   }, []);
 
   useRealtimeInvalidate("/participantes/clientes", carregar);
+
+  const idsParticipantes = useMemo(() => clientes.map((c) => c.participanteId), [clientes]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("participante", idsParticipantes);
+
+  async function abrirLogs(participanteId) {
+    setVerLogsDe(participanteId);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("participante", participanteId);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   async function alternarBloqueio(cliente) {
     const novoStatus = cliente.bloqueioFinanceiro === "BLOQUEADO" ? "LIBERADO" : "BLOQUEADO";
@@ -58,6 +80,17 @@ export function ClientesPage() {
       ),
     },
     {
+      key: "_ultimaEdicao",
+      label: "Última edição",
+      render: (row) => (
+        <UltimaEdicaoCelula
+          info={ultimasEdicoes[row.participanteId]}
+          carregando={carregandoUltimas && ultimasEdicoes[row.participanteId] === undefined}
+          onClick={() => abrirLogs(row.participanteId)}
+        />
+      ),
+    },
+    {
       key: "_acao",
       label: "",
       render: (row) => (
@@ -83,6 +116,14 @@ export function ClientesPage() {
         rows={clientes}
         loading={carregando}
         emptyMessage="Nenhum cliente encontrado. Promova um participante a cliente na tela de Participantes."
+      />
+
+      <HistoricoModal
+        open={Boolean(verLogsDe)}
+        onClose={() => setVerLogsDe(null)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={PARTICIPANTE_FIELD_LABELS}
       />
     </div>
   );

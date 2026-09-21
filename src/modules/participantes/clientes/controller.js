@@ -1,3 +1,4 @@
+import { auditarAtualizacao } from "../../../lib/auditLog.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { buildPaginatedResult, parsePagination } from "../../../utils/pagination.js";
 import * as service from "./service.js";
@@ -27,11 +28,20 @@ export const getById = asyncHandler(async (req, res) => {
 });
 
 export const updateBloqueio = asyncHandler(async (req, res) => {
+  const antes = await service.getClienteTenant({ empresaId: req.user.empresaId, participanteId: req.params.id });
   const cliente = await service.updateBloqueio({
     empresaId: req.user.empresaId,
     usuarioId: req.user.id,
     id: req.params.id,
     bloqueioFinanceiro: req.body.bloqueioFinanceiro,
+  });
+  await auditarAtualizacao({
+    empresaId: req.user.empresaId,
+    entidade: "cliente",
+    entidadeId: req.params.id,
+    usuarioId: req.user.id,
+    antes: { bloqueioFinanceiro: antes.bloqueioFinanceiro },
+    depois: { bloqueioFinanceiro: cliente.bloqueioFinanceiro },
   });
   res.json(cliente);
 });
