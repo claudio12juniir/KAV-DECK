@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiDollarSign, FiHome, FiPackage, FiShoppingCart, FiTruck } from "react-icons/fi";
+import {
+  FiChevronDown,
+  FiDollarSign,
+  FiHome,
+  FiLogOut,
+  FiPackage,
+  FiShoppingCart,
+  FiTruck,
+} from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CardNavMenu } from "../effects/CardNavMenu.jsx";
 import { Dock } from "../effects/Dock.jsx";
@@ -137,6 +145,17 @@ function ehAtivo(pathAtual, to, end) {
   return pathAtual === to || pathAtual.startsWith(`${to}/`);
 }
 
+// "Claudio Junior" -> "CJ" — usado no avatar circular do bloco de usuário no
+// lugar de um ícone genérico, pra dar uma referência visual rápida de quem
+// está logado sem depender de foto de perfil (que o sistema não tem).
+function iniciais(nome) {
+  if (!nome) return "?";
+  const partes = nome.trim().split(/\s+/);
+  const primeira = partes[0]?.[0] ?? "";
+  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : "";
+  return (primeira + ultima).toUpperCase();
+}
+
 // group.to (item de nível único, ex: "Início") ou group.items (dropdown)
 // navegam pra URL real via useNavigate — cada clique troca a página como em
 // qualquer app com rota endereçável (ver App.jsx).
@@ -174,6 +193,7 @@ function NavGroup({ group, pathAtual, onNavegar }) {
         aria-expanded={aberto}
       >
         {group.label}
+        <FiChevronDown className={`app-nav-caret ${aberto ? "is-open" : ""}`} />
       </button>
       {aberto && (
         <div className="app-nav-dropdown">
@@ -253,21 +273,24 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <header className={`app-topbar ${scrolled ? "is-scrolled" : ""}`}>
-        <div className="app-topbar-inner container">
+        <div className="app-topbar-inner">
           <div className="app-brand">
             KAV<span className="app-brand-dot">DECK</span>
           </div>
 
-          <nav className="app-nav">
-            {navGroups.map((group) => (
-              <NavGroup key={group.label} group={group} pathAtual={location.pathname} onNavegar={navigate} />
-            ))}
+          <nav className="app-nav-scroll">
+            <div className="app-nav">
+              {navGroups.map((group) => (
+                <NavGroup key={group.label} group={group} pathAtual={location.pathname} onNavegar={navigate} />
+              ))}
+            </div>
           </nav>
 
           <div className="app-user">
+            <span className="app-user-avatar">{iniciais(me?.nome)}</span>
             <span className="app-user-nome">{me?.nome ?? "..."}</span>
-            <button className="app-user-sair" onClick={signOut}>
-              Sair
+            <button className="app-user-sair" onClick={signOut} title="Sair">
+              <FiLogOut />
             </button>
           </div>
         </div>
