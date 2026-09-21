@@ -12,6 +12,7 @@ export function PisPage() {
       title="PIS"
       description="Regras de PIS usadas na tributação de produtos por CFOP."
       resource="/cadastros/regras-pis"
+      entidade="regra-pis"
       fields={fields}
     />
   );

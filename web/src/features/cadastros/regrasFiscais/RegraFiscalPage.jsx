@@ -4,7 +4,7 @@ import { criarRegraFiscalApi } from "./api.js";
 // Sem `searchable`: o backend dessas 6 regras (ver factory.js) só pagina,
 // não filtra por texto — ligar a busca aqui mandaria um `q` que o servidor
 // silenciosamente ignora, dando a falsa impressão de que filtrou.
-export function RegraFiscalPage({ title, description, resource, fields }) {
+export function RegraFiscalPage({ title, description, resource, fields, entidade }) {
   return (
     <SimpleCrudManager
       title={title}
@@ -12,6 +12,7 @@ export function RegraFiscalPage({ title, description, resource, fields }) {
       api={criarRegraFiscalApi(resource)}
       resource={resource}
       fields={fields}
+      entidade={entidade}
     />
   );
 }

@@ -14,6 +14,7 @@ export function UnidadesMedidaPage() {
       description="Usadas no cadastro de produtos."
       api={unidadesMedidaApi}
       fields={fields}
+      entidade="unidade-medida"
     />
   );
 }

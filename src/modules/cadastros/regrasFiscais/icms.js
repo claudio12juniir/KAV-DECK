@@ -13,6 +13,7 @@ const createSchema = z.object({
 
 export const router = criarCrudRegraFiscal({
   modelo: "regraIcms",
+  entidade: "regra-icms",
   createSchema,
   updateSchema: createSchema.partial(),
   select: {

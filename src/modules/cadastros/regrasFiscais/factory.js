@@ -5,13 +5,15 @@ import { validate } from "../../../middlewares/validate.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { AppError } from "../../../utils/AppError.js";
 import { idParamSchema, paginationQuerySchema } from "../../../utils/commonSchemas.js";
+import { auditarAtualizacao, auditarCriacao, auditarExclusao } from "../../../lib/auditLog.js";
 import { prisma } from "../../../lib/prisma.js";
 import { buildPaginatedResult, parsePagination } from "../../../utils/pagination.js";
 
 // As 6 regras fiscais (ICMS/IPI/PIS/COFINS/IBS/CBS) têm CRUD idêntico —
 // só muda o modelo do Prisma e o formato de cada uma. Uma fábrica evita
-// repetir a mesma rota 6 vezes; cada regra só declara seu schema e select.
-export function criarCrudRegraFiscal({ modelo, createSchema, updateSchema, select }) {
+// repetir a mesma rota 6 vezes; cada regra só declara seu schema, select e
+// entidade (usada no histórico de alterações).
+export function criarCrudRegraFiscal({ modelo, entidade, createSchema, updateSchema, select }) {
   const router = Router();
   router.use(auth);
 
@@ -51,6 +53,13 @@ export function criarCrudRegraFiscal({ modelo, createSchema, updateSchema, selec
         data: { ...req.body, empresaId: req.user.empresaId },
         select,
       });
+      await auditarCriacao({
+        empresaId: req.user.empresaId,
+        entidade,
+        entidadeId: item.id,
+        usuarioId: req.user.id,
+        registro: item,
+      });
       res.status(201).json(item);
     }),
   );
@@ -62,10 +71,18 @@ export function criarCrudRegraFiscal({ modelo, createSchema, updateSchema, selec
     asyncHandler(async (req, res) => {
       const existente = await prisma[modelo].findFirst({
         where: { id: req.params.id, empresaId: req.user.empresaId },
-        select: { id: true },
+        select,
       });
       if (!existente) throw new AppError(404, "NOT_FOUND", "Regra fiscal não encontrada.");
       const item = await prisma[modelo].update({ where: { id: req.params.id }, data: req.body, select });
+      await auditarAtualizacao({
+        empresaId: req.user.empresaId,
+        entidade,
+        entidadeId: item.id,
+        usuarioId: req.user.id,
+        antes: existente,
+        depois: item,
+      });
       res.json(item);
     }),
   );
@@ -77,10 +94,17 @@ export function criarCrudRegraFiscal({ modelo, createSchema, updateSchema, selec
     asyncHandler(async (req, res) => {
       const existente = await prisma[modelo].findFirst({
         where: { id: req.params.id, empresaId: req.user.empresaId },
-        select: { id: true },
+        select,
       });
       if (!existente) throw new AppError(404, "NOT_FOUND", "Regra fiscal não encontrada.");
       await prisma[modelo].delete({ where: { id: req.params.id } });
+      await auditarExclusao({
+        empresaId: req.user.empresaId,
+        entidade,
+        entidadeId: req.params.id,
+        usuarioId: req.user.id,
+        registro: existente,
+      });
       res.status(204).send();
     }),
   );

@@ -15,6 +15,7 @@ export function IcmsPage() {
       title="ICMS"
       description="Regras de ICMS usadas na tributação de produtos por CFOP."
       resource="/cadastros/regras-icms"
+      entidade="regra-icms"
       fields={fields}
     />
   );

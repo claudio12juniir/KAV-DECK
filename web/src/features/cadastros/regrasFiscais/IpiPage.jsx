@@ -12,6 +12,7 @@ export function IpiPage() {
       title="IPI"
       description="Regras de IPI usadas na tributação de produtos por CFOP."
       resource="/cadastros/regras-ipi"
+      entidade="regra-ipi"
       fields={fields}
     />
   );

@@ -41,6 +41,7 @@ export function TabelasPrecoPage() {
       description="Listas de preço independentes do cadastro de produto."
       api={tabelasPrecoApi}
       resource="/cadastros/tabelas-preco"
+      entidade="tabela-preco"
       fields={fields}
       columns={columns}
     />

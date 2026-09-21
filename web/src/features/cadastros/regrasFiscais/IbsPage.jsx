@@ -19,6 +19,7 @@ export function IbsPage() {
       title="IBS"
       description="Imposto sobre Bens e Serviços (reforma tributária) — cadastro preparatório."
       resource="/cadastros/regras-ibs"
+      entidade="regra-ibs"
       fields={fields}
     />
   );

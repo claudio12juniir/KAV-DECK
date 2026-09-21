@@ -14,6 +14,7 @@ export function CondicoesPagamentoPage() {
       description="Usadas em pedidos de compra e venda para gerar os títulos."
       api={condicoesPagamentoApi}
       resource="/cadastros/condicoes-pagamento"
+      entidade="condicao-pagamento"
       fields={fields}
     />
   );

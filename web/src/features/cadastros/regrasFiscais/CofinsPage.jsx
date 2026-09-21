@@ -12,6 +12,7 @@ export function CofinsPage() {
       title="COFINS"
       description="Regras de COFINS usadas na tributação de produtos por CFOP."
       resource="/cadastros/regras-cofins"
+      entidade="regra-cofins"
       fields={fields}
     />
   );

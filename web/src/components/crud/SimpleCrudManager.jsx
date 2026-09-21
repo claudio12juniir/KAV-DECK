@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
 import { logsApi } from "../../features/cadastros/logs/api.js";
+import { HistoricoModal, UltimaEdicaoCelula, useUltimasEdicoes } from "../audit/Historico.jsx";
 import { Button } from "../ui/Button.jsx";
 import { Input } from "../ui/Input.jsx";
 import { Modal } from "../ui/Modal.jsx";
@@ -8,12 +9,6 @@ import { Select } from "../ui/Select.jsx";
 import { DataTable } from "../ui/Table.jsx";
 import { useToast } from "../ui/Toast.jsx";
 import "./SimpleCrudManager.css";
-
-const ACAO_LOG_LABEL = { CRIACAO: "Criação", ATUALIZACAO: "Atualização", EXCLUSAO: "Exclusão" };
-
-function formatarDataHora(iso) {
-  return new Date(iso).toLocaleString("pt-BR");
-}
 
 function valorInicial(fields) {
   return Object.fromEntries(
@@ -50,6 +45,10 @@ export function SimpleCrudManager({
   const [verLogsDe, setVerLogsDe] = useState(null);
   const [logs, setLogs] = useState([]);
   const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  const idsVisiveis = useMemo(() => itens.map((it) => it[idField]), [itens, idField]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes(entidade, idsVisiveis);
+  const fieldLabels = useMemo(() => Object.fromEntries(fields.map((f) => [f.name, f.label])), [fields]);
 
   async function carregar(q) {
     setCarregando(true);
@@ -164,6 +163,21 @@ export function SimpleCrudManager({
 
   const colunasTabela = [
     ...(columns ?? fields.map((f) => ({ key: f.name, label: f.label }))),
+    ...(entidade
+      ? [
+          {
+            key: "_ultimaEdicao",
+            label: "Última edição",
+            render: (row) => (
+              <UltimaEdicaoCelula
+                info={ultimasEdicoes[row[idField]]}
+                carregando={carregandoUltimas && ultimasEdicoes[row[idField]] === undefined}
+                onClick={() => abrirLogs(row)}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       key: "_acoes",
       label: "",
@@ -180,11 +194,6 @@ export function SimpleCrudManager({
           >
             Excluir
           </button>
-          {entidade && (
-            <button type="button" className="autocomplete-trocar" onClick={() => abrirLogs(row)}>
-              Logs
-            </button>
-          )}
         </div>
       ),
     },
@@ -304,22 +313,13 @@ export function SimpleCrudManager({
       </Modal>
 
       {entidade && (
-        <Modal open={Boolean(verLogsDe)} onClose={() => setVerLogsDe(null)} title="Logs">
-          {carregandoLogs ? (
-            <p>Carregando...</p>
-          ) : logs.length === 0 ? (
-            <p>Nenhum log encontrado.</p>
-          ) : (
-            <ul className="crud-logs-lista">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <strong>{ACAO_LOG_LABEL[log.acao] ?? log.acao}</strong> em {formatarDataHora(log.criadoEm)}
-                  {log.usuario?.nome ? ` por ${log.usuario.nome}` : ""}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Modal>
+        <HistoricoModal
+          open={Boolean(verLogsDe)}
+          onClose={() => setVerLogsDe(null)}
+          logs={logs}
+          loading={carregandoLogs}
+          fieldLabels={fieldLabels}
+        />
       )}
     </div>
   );

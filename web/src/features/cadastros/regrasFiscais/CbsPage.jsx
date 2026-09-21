@@ -16,6 +16,7 @@ export function CbsPage() {
       title="CBS"
       description="Contribuição sobre Bens e Serviços (reforma tributária) — cadastro preparatório."
       resource="/cadastros/regras-cbs"
+      entidade="regra-cbs"
       fields={fields}
     />
   );
