@@ -15,6 +15,7 @@ export function RotasEntregaPage() {
       api={rotasEntregaApi}
       resource="/participantes/rotas-entrega"
       fields={fields}
+      entidade="rota-entrega"
     />
   );
 }

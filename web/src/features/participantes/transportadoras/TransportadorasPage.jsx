@@ -15,6 +15,7 @@ export function TransportadorasPage() {
       api={transportadorasApi}
       resource="/participantes/transportadoras"
       fields={fields}
+      entidade="transportadora"
     />
   );
 }

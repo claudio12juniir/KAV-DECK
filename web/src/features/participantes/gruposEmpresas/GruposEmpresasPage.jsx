@@ -11,6 +11,7 @@ export function GruposEmpresasPage() {
       api={gruposEmpresasApi}
       resource="/participantes/grupos-empresas"
       fields={fields}
+      entidade="grupo-empresas"
     />
   );
 }

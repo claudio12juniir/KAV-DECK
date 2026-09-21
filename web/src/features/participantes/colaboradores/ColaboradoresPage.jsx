@@ -71,6 +71,7 @@ export function ColaboradoresPage() {
       resource="/participantes/colaboradores"
       fields={fields}
       columns={columns}
+      entidade="colaborador"
     />
   );
 }

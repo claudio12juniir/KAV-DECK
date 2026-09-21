@@ -79,6 +79,7 @@ export function ParticipantesPage() {
       fields={fields}
       columns={columns}
       searchable
+      entidade="participante"
     />
   );
 }
