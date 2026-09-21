@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { HistoricoModal, UltimaEdicaoCelula, useUltimasEdicoes } from "../../../components/audit/Historico.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -7,6 +8,7 @@ import { Select } from "../../../components/ui/Select.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { criarMovimentoCaixa, listMovimentosCaixa } from "./api.js";
 
 function formatarData(iso) {
@@ -26,6 +28,25 @@ export function CaixaPage() {
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState(formInicial);
   const [salvando, setSalvando] = useState(false);
+  const [verLogsDe, setVerLogsDe] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  const idsVisiveis = useMemo(() => movimentos.map((m) => m.id), [movimentos]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("movimento-caixa", idsVisiveis);
+
+  async function abrirLogs(id) {
+    setVerLogsDe(id);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("movimento-caixa", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   async function carregar() {
     setCarregando(true);
@@ -71,6 +92,17 @@ export function CaixaPage() {
     },
     { key: "valor", label: "Valor", render: (row) => formatarMoeda(row.valor) },
     { key: "descricao", label: "Descrição" },
+    {
+      key: "_ultimaEdicao",
+      label: "Lançado por",
+      render: (row) => (
+        <UltimaEdicaoCelula
+          info={ultimasEdicoes[row.id]}
+          carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined}
+          onClick={() => abrirLogs(row.id)}
+        />
+      ),
+    },
   ];
 
   return (
@@ -121,6 +153,14 @@ export function CaixaPage() {
           />
         </form>
       </Modal>
+
+      <HistoricoModal
+        open={Boolean(verLogsDe)}
+        onClose={() => setVerLogsDe(null)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ tipo: "Tipo", valor: "Valor", descricao: "Descrição" }}
+      />
     </div>
   );
 }

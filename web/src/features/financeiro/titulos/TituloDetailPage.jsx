@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { HistoricoModal } from "../../../components/audit/Historico.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -9,6 +10,7 @@ import { SkeletonLines } from "../../../components/ui/Skeleton.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { baixarTitulo, cancelarTitulo, getTitulo } from "./api.js";
 import { FORMA_BAIXA_LABEL } from "./formaBaixa.js";
 import { StatusTituloBadge } from "./StatusTituloBadge.jsx";
@@ -32,6 +34,22 @@ export function TituloDetailPage() {
   const [salvandoBaixa, setSalvandoBaixa] = useState(false);
   const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [historicoAberto, setHistoricoAberto] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  async function abrirHistorico() {
+    setHistoricoAberto(true);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("titulo", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   async function carregar() {
     setCarregando(true);
@@ -114,7 +132,12 @@ export function TituloDetailPage() {
             {formatarData(titulo.vencimento)} — {formatarMoeda(titulo.valor)}
           </p>
         </div>
-        <StatusTituloBadge status={titulo.status} />
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <Button variant="ghost" onClick={abrirHistorico}>
+            Histórico
+          </Button>
+          <StatusTituloBadge status={titulo.status} />
+        </div>
       </div>
 
       <Card style={{ marginBottom: "24px" }}>
@@ -173,6 +196,14 @@ export function TituloDetailPage() {
       >
         Essa ação não pode ser desfeita.
       </Modal>
+
+      <HistoricoModal
+        open={historicoAberto}
+        onClose={() => setHistoricoAberto(false)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ status: "Status", valor: "Valor", vencimento: "Vencimento", formaPagamento: "Forma de pagamento" }}
+      />
     </div>
   );
 }

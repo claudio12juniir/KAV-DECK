@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { HistoricoModal, UltimaEdicaoCelula, useUltimasEdicoes } from "../../../components/audit/Historico.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { agruparTitulos, listTitulos } from "./api.js";
 import { StatusTituloBadge } from "./StatusTituloBadge.jsx";
 
@@ -43,6 +45,25 @@ export function TitulosPage({ tipoFixo, titulo }) {
   const [selecionados, setSelecionados] = useState(new Set());
   const [agrupando, setAgrupando] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [verLogsDe, setVerLogsDe] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  const idsVisiveis = useMemo(() => titulos.map((t) => t.id), [titulos]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("titulo", idsVisiveis);
+
+  async function abrirLogs(id) {
+    setVerLogsDe(id);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("titulo", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   useEffect(() => {
     let ativo = true;
@@ -123,6 +144,20 @@ export function TitulosPage({ tipoFixo, titulo }) {
     { key: "participante", label: "Participante", render: (row) => row.participante.razaoSocial },
     { key: "valor", label: "Valor", render: (row) => formatarMoeda(row.valor) },
     ...(!tipoFixo ? [{ key: "tipo", label: "Tipo", render: (row) => (row.tipo === "PAGAR" ? "A pagar" : "A receber") }] : []),
+    {
+      key: "_ultimaEdicao",
+      label: "Última edição",
+      render: (row) => (
+        <UltimaEdicaoCelula
+          info={ultimasEdicoes[row.id]}
+          carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined}
+          onClick={(e) => {
+            e.stopPropagation();
+            abrirLogs(row.id);
+          }}
+        />
+      ),
+    },
   ];
 
   return (
@@ -178,6 +213,14 @@ export function TitulosPage({ tipoFixo, titulo }) {
         loading={carregando}
         onRowClick={(row) => navigate(`/financeiro/titulos/${row.id}`)}
         emptyMessage="Nenhum título encontrado."
+      />
+
+      <HistoricoModal
+        open={Boolean(verLogsDe)}
+        onClose={() => setVerLogsDe(null)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ status: "Status", valor: "Valor", vencimento: "Vencimento", formaPagamento: "Forma de pagamento" }}
       />
     </div>
   );

@@ -1,7 +1,11 @@
 import { prisma } from "../../../lib/prisma.js";
 import { AppError } from "../../../utils/AppError.js";
 
+// `id` incluído pro frontend poder abrir o histórico de alterações
+// (entidadeId do log = empresaId, já que essa "configuração" é só um campo
+// da própria Empresa, sem tabela/id próprios).
 const SELECT = {
+  id: true,
   contaBancariaPadraoBoletoId: true,
   contaBancariaPadraoBoleto: { select: { id: true, banco: true, agencia: true, conta: true } },
 };

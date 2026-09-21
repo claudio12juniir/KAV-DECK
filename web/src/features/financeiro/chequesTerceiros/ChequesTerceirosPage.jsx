@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { HistoricoModal, UltimaEdicaoCelula, useUltimasEdicoes } from "../../../components/audit/Historico.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -6,6 +7,7 @@ import { Modal } from "../../../components/ui/Modal.jsx";
 import { DataTable } from "../../../components/ui/Table.jsx";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../../hooks/useRealtimeInvalidate.js";
+import { logsApi } from "../../cadastros/logs/api.js";
 import { ParticipanteAutocomplete } from "../../shared/ParticipanteAutocomplete.jsx";
 import { atualizarStatusChequeTerceiro, criarChequeTerceiro, listChequesTerceiros } from "./api.js";
 
@@ -26,6 +28,25 @@ export function ChequesTerceirosPage() {
   const [valor, setValor] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [atualizandoId, setAtualizandoId] = useState(null);
+  const [verLogsDe, setVerLogsDe] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+
+  const idsVisiveis = useMemo(() => cheques.map((c) => c.id), [cheques]);
+  const { mapa: ultimasEdicoes, carregando: carregandoUltimas } = useUltimasEdicoes("cheque-terceiro", idsVisiveis);
+
+  async function abrirLogs(id) {
+    setVerLogsDe(id);
+    setCarregandoLogs(true);
+    try {
+      const { items } = await logsApi.list("cheque-terceiro", id);
+      setLogs(items);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível carregar o histórico.");
+    } finally {
+      setCarregandoLogs(false);
+    }
+  }
 
   async function carregar() {
     setCarregando(true);
@@ -88,6 +109,17 @@ export function ChequesTerceirosPage() {
       key: "status",
       label: "Situação",
       render: (row) => <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>,
+    },
+    {
+      key: "_ultimaEdicao",
+      label: "Última edição",
+      render: (row) => (
+        <UltimaEdicaoCelula
+          info={ultimasEdicoes[row.id]}
+          carregando={carregandoUltimas && ultimasEdicoes[row.id] === undefined}
+          onClick={() => abrirLogs(row.id)}
+        />
+      ),
     },
     {
       key: "_acoes",
@@ -167,6 +199,14 @@ export function ChequesTerceirosPage() {
           />
         </form>
       </Modal>
+
+      <HistoricoModal
+        open={Boolean(verLogsDe)}
+        onClose={() => setVerLogsDe(null)}
+        logs={logs}
+        loading={carregandoLogs}
+        fieldLabels={{ status: "Situação", dataCompensacao: "Data de compensação" }}
+      />
     </div>
   );
 }
