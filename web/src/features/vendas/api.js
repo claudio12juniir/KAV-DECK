@@ -1,7 +1,35 @@
 import { apiClient } from "../../lib/apiClient.js";
 
-export function listPedidosVenda({ status, filtro, separadorId, dataInicial, dataFinal, page, pageSize } = {}) {
-  return apiClient.get("/vendas/pedidos", { status, filtro, separadorId, dataInicial, dataFinal, page, pageSize });
+export function listPedidosVenda({
+  status,
+  statuses,
+  filtro,
+  clienteTexto,
+  vendedorId,
+  periodo,
+  rotaEntregaId,
+  arquivado,
+  separadorId,
+  dataInicial,
+  dataFinal,
+  page,
+  pageSize,
+} = {}) {
+  return apiClient.get("/vendas/pedidos", {
+    status,
+    statuses,
+    filtro,
+    clienteTexto,
+    vendedorId,
+    periodo,
+    rotaEntregaId,
+    arquivado,
+    separadorId,
+    dataInicial,
+    dataFinal,
+    page,
+    pageSize,
+  });
 }
 
 export function arquivarPedidoVenda(id, arquivado) {

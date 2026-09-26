@@ -10,8 +10,19 @@ import { useToast } from "../../components/ui/Toast.jsx";
 import { useRealtimeInvalidate } from "../../hooks/useRealtimeInvalidate.js";
 import { listCfopOptions } from "../fiscal/cfop/api.js";
 import { listNaturezasOperacaoOptions } from "../fiscal/naturezasOperacao/api.js";
-import { agruparNfPedidosVenda, duplicarPedidoVenda, listPedidosVenda } from "./api.js";
+import { agruparNfPedidosVenda, duplicarPedidoVenda, listColaboradores, listPedidosVenda, listRotasEntrega } from "./api.js";
 import { StatusBadge } from "./components/StatusBadge.jsx";
+
+const TURNO_LABEL = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite", SOS: "SOS", RETIRA: "Retira" };
+
+// Baldes da barra rápida de status (seção 6 do mapeamento: três toggles
+// independentes — Em aberto/Faturado ligados por padrão, Cancelado
+// desligado — em vez de um <select> de seleção única).
+const STATUS_CHIPS = [
+  { valor: "ABERTO", label: "Em aberto" },
+  { valor: "FATURADO", label: "Faturado" },
+  { valor: "CANCELADO", label: "Cancelado" },
+];
 
 function formatarData(iso) {
   return new Date(iso).toLocaleDateString("pt-BR");
@@ -22,20 +33,33 @@ function formatarMoeda(valor) {
 }
 
 // Consulta de Pedidos — modo "grid" do Terminal de Venda (seção 6 do
-// mapeamento): filtros rápidos, seleção em lote com soma de valor, e as
-// ações que operam sobre a seleção (Agrupar NF, Duplicar). "Estornar" foi
-// deixado de fora de propósito — nem o sistema original testou essa ação
-// (seção 6: "não testada"), e reverter um faturamento aqui mexeria em
-// baixa de estoque e título já gerados; implementar isso às pressas seria
-// arriscado. Ver relatório da sessão.
+// mapeamento): filtros rápidos + painel "Mais filtros" combinável (Cliente,
+// Vendedor, Período de entrega, Rota/Região, situação financeira,
+// arquivados), toggles de status independentes (não seleção única), seleção
+// em lote com soma de valor, e as ações que operam sobre a seleção (Agrupar
+// NF, Duplicar). "Estornar" foi deixado de fora de propósito — nem o sistema
+// original testou essa ação (seção 6: "não testada"), e reverter um
+// faturamento aqui mexeria em baixa de estoque e título já gerados;
+// implementar isso às pressas seria arriscado. Ver relatório da sessão.
 export function PedidosVendaListPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [pedidos, setPedidos] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [filtro, setFiltro] = useState("");
+  const [statusesLigados, setStatusesLigados] = useState(new Set(["ABERTO", "FATURADO"]));
+  const [clienteTexto, setClienteTexto] = useState("");
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");
+  const [vendedorId, setVendedorId] = useState("");
+  const [periodo, setPeriodo] = useState("");
+
+  const [mostrarMaisFiltros, setMostrarMaisFiltros] = useState(false);
+  const [rotaEntregaId, setRotaEntregaId] = useState("");
+  const [situacaoFinanceira, setSituacaoFinanceira] = useState("");
+  const [exibirArquivados, setExibirArquivados] = useState(false);
+  const [vendedores, setVendedores] = useState([]);
+  const [rotas, setRotas] = useState([]);
+
   const [refreshKey, setRefreshKey] = useState(0);
   const [selecionados, setSelecionados] = useState(new Set());
   const [duplicandoId, setDuplicandoId] = useState(null);
@@ -50,9 +74,38 @@ export function PedidosVendaListPage() {
   const [agrupando, setAgrupando] = useState(false);
 
   useEffect(() => {
+    Promise.all([listColaboradores({ tipo: "VENDEDOR", pageSize: 100 }), listRotasEntrega({ pageSize: 100 })]).then(
+      ([v, r]) => {
+        setVendedores(v.items);
+        setRotas(r.items);
+      },
+    );
+  }, []);
+
+  function alternarStatusChip(valor) {
+    setStatusesLigados((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(valor)) novo.delete(valor);
+      else novo.add(valor);
+      return novo;
+    });
+  }
+
+  useEffect(() => {
     let ativo = true;
     setCarregando(true);
-    listPedidosVenda({ filtro: filtro || undefined, dataInicial: dataInicial || undefined, dataFinal: dataFinal || undefined, pageSize: 100 })
+    listPedidosVenda({
+      statuses: statusesLigados.size ? [...statusesLigados].join(",") : undefined,
+      filtro: situacaoFinanceira || undefined,
+      clienteTexto: clienteTexto || undefined,
+      vendedorId: vendedorId || undefined,
+      periodo: periodo || undefined,
+      rotaEntregaId: rotaEntregaId || undefined,
+      arquivado: exibirArquivados || undefined,
+      dataInicial: dataInicial || undefined,
+      dataFinal: dataFinal || undefined,
+      pageSize: 100,
+    })
       .then(({ items }) => {
         if (ativo) setPedidos(items);
       })
@@ -64,7 +117,18 @@ export function PedidosVendaListPage() {
       ativo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro, dataInicial, dataFinal, refreshKey]);
+  }, [
+    statusesLigados,
+    situacaoFinanceira,
+    clienteTexto,
+    vendedorId,
+    periodo,
+    rotaEntregaId,
+    exibirArquivados,
+    dataInicial,
+    dataFinal,
+    refreshKey,
+  ]);
 
   useRealtimeInvalidate("/vendas/pedidos", () => setRefreshKey((k) => k + 1));
 
@@ -189,20 +253,92 @@ export function PedidosVendaListPage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "16px" }}>
-        <div style={{ minWidth: "200px" }}>
-          <Select label="Filtro" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="">Todos</option>
-            <option value="EM_ABERTO">Em aberto</option>
-            <option value="LIQUIDADO">Liquidado</option>
-            <option value="CANCELADO">Cancelado</option>
-            <option value="AGRUPADO">Agrupado</option>
-            <option value="ARQUIVADO">Arquivado</option>
-          </Select>
-        </div>
+      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "12px" }}>
         <Input label="Data inicial" type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} />
         <Input label="Data final" type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} />
+        <Input
+          label="Cliente"
+          value={clienteTexto}
+          onChange={(e) => setClienteTexto(e.target.value)}
+          placeholder="Buscar por razão social ou CNPJ..."
+          style={{ minWidth: "220px" }}
+        />
+        <div style={{ minWidth: "180px" }}>
+          <Select label="Vendedor" value={vendedorId} onChange={(e) => setVendedorId(e.target.value)}>
+            <option value="">Todos</option>
+            {vendedores.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.nome}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div style={{ minWidth: "160px" }}>
+          <Select label="Período da entrega" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+            <option value="">Todos</option>
+            {Object.entries(TURNO_LABEL).map(([valor, label]) => (
+              <option key={valor} value={valor}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <Button variant="ghost" onClick={() => setMostrarMaisFiltros((v) => !v)}>
+          {mostrarMaisFiltros ? "Menos filtros ▴" : "Mais filtros ▾"}
+        </Button>
       </div>
+
+      {/* Toggles independentes de status — combináveis entre si, ao
+          contrário do <select> de opção única anterior (seção 6 do
+          mapeamento: "Em aberto"/"Faturado" ligados por padrão, "Cancelado"
+          desligado, os três podendo estar ligados ao mesmo tempo). */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+        {STATUS_CHIPS.map((chip) => (
+          <Button
+            key={chip.valor}
+            variant={statusesLigados.has(chip.valor) ? "secondary" : "ghost"}
+            onClick={() => alternarStatusChip(chip.valor)}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      {mostrarMaisFiltros && (
+        <div
+          style={{
+            display: "flex",
+            gap: "16px",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+            marginBottom: "16px",
+            padding: "12px 16px",
+            background: "var(--color-surface-alt, var(--color-accent-soft))",
+            borderRadius: "8px",
+          }}
+        >
+          <div style={{ minWidth: "180px" }}>
+            <Select label="Rota / Região" value={rotaEntregaId} onChange={(e) => setRotaEntregaId(e.target.value)}>
+              <option value="">Todas</option>
+              {rotas.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.nome}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div style={{ minWidth: "180px" }}>
+            <Select label="Situação financeira" value={situacaoFinanceira} onChange={(e) => setSituacaoFinanceira(e.target.value)}>
+              <option value="">Todas</option>
+              <option value="LIQUIDADO">Liquidado (títulos baixados)</option>
+              <option value="AGRUPADO">Agrupado numa NF</option>
+            </Select>
+          </div>
+          <Button variant={exibirArquivados ? "secondary" : "ghost"} onClick={() => setExibirArquivados((v) => !v)}>
+            Exibir arquivados
+          </Button>
+        </div>
+      )}
 
       {selecionados.size > 0 && (
         <div style={{ marginBottom: "16px", padding: "12px 16px", background: "var(--color-accent-soft)", borderRadius: "8px" }}>

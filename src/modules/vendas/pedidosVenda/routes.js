@@ -26,9 +26,29 @@ export const router = Router();
 
 router.use(auth);
 
+// "true"/"false" cru da query string — z.coerce.boolean() não serve aqui
+// porque Boolean("false") é true; precisa mapear os dois valores explícitos.
+const booleanQueryParam = () =>
+  z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional();
+
 const listQuerySchema = paginationQuerySchema.extend({
   status: z.enum(["ABERTO", "SEPARACAO", "FATURADO", "CANCELADO"]).optional(),
-  filtro: z.enum(["EM_ABERTO", "LIQUIDADO", "CANCELADO", "AGRUPADO", "ARQUIVADO"]).optional(),
+  // Filtros rápidos multi-seleção da Consulta de Pedidos (seção 6 do
+  // MAPEAMENTO_VENDAS_SPACESOFT.md): "ABERTO,FATURADO" etc., substituindo o
+  // antigo `filtro` de seleção única para os 3 baldes de status.
+  statuses: z.string().optional(),
+  // `filtro` agora cobre só as situações derivadas que não são um status —
+  // EM_ABERTO/CANCELADO migraram pra `statuses`, ARQUIVADO virou o parâmetro
+  // `arquivado` dedicado abaixo.
+  filtro: z.enum(["LIQUIDADO", "AGRUPADO"]).optional(),
+  clienteTexto: z.string().optional(),
+  vendedorId: z.string().uuid().optional(),
+  periodo: z.enum(["MANHA", "TARDE", "NOITE", "SOS", "RETIRA"]).optional(),
+  rotaEntregaId: z.string().uuid().optional(),
+  arquivado: booleanQueryParam(),
   separadorId: z.string().uuid().optional(),
   dataInicial: z.coerce.date().optional(),
   dataFinal: z.coerce.date().optional(),

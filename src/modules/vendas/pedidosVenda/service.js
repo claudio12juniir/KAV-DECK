@@ -115,41 +115,82 @@ async function getPedidoOrThrow({ empresaId, id, select = SELECT_DETAIL }) {
   return pedido;
 }
 
-// Filtro de "lançamento" pedido pelo usuário — 5 baldes que não mapeiam 1:1
-// pro enum StatusPedidoVenda: LIQUIDADO e AGRUPADO são derivados de
-// relações (títulos baixados / entrou num agrupamento de NF), ARQUIVADO é a
-// flag nova, e todos excluem arquivado=true (arquivar esconde da lista
-// independente do status por baixo — ver comentário do campo no schema).
-// EM_ABERTO/CANCELADO continuam batendo direto no enum. Quem não passar
-// nenhum filtro continua vendo tudo (comportamento anterior preservado).
+// `filtro` agora só cobre as duas situações derivadas de relações (títulos
+// baixados / entrou num agrupamento de NF) que não mapeiam pra uma coluna de
+// status simples — EM_ABERTO/CANCELADO/ARQUIVADO migraram pra `statuses` e
+// `arquivado` abaixo, onde viram filtros independentes e combináveis, igual
+// aos toggles da Consulta de Pedidos de referência (seção 6 do
+// MAPEAMENTO_VENDAS_SPACESOFT.md) em vez de um <select> de opção única.
 function whereDoFiltro(filtro) {
   switch (filtro) {
-    case "EM_ABERTO":
-      return { status: "ABERTO", arquivado: false };
-    case "CANCELADO":
-      return { status: "CANCELADO", arquivado: false };
     case "LIQUIDADO":
       return {
         status: "FATURADO",
-        arquivado: false,
         titulosFinanceiros: { some: {} },
         NOT: { titulosFinanceiros: { some: { status: { not: "BAIXADO" } } } },
       };
     case "AGRUPADO":
-      return { arquivado: false, pedidosVendaAgrupados: { some: {} } };
-    case "ARQUIVADO":
-      return { arquivado: true };
+      return { pedidosVendaAgrupados: { some: {} } };
     default:
       return {};
   }
 }
 
-export async function list({ empresaId, skip, take, status, filtro, separadorId, dataInicial, dataFinal }) {
+// Cada chip da barra rápida ("Em aberto" / "Faturado" / "Cancelado") pode
+// cobrir mais de um valor do enum — "Em aberto" inclui pedidos já em
+// separação, que ainda não foram nem faturados nem cancelados.
+const STATUS_BUCKETS = {
+  ABERTO: ["ABERTO", "SEPARACAO"],
+  FATURADO: ["FATURADO"],
+  CANCELADO: ["CANCELADO"],
+};
+
+export async function list({
+  empresaId,
+  skip,
+  take,
+  status,
+  statuses,
+  filtro,
+  clienteTexto,
+  vendedorId,
+  periodo,
+  rotaEntregaId,
+  arquivado,
+  separadorId,
+  dataInicial,
+  dataFinal,
+}) {
+  const statusList = statuses
+    ? [...new Set(statuses.split(",").flatMap((balde) => STATUS_BUCKETS[balde.trim()] ?? []))]
+    : [];
+
   const where = {
     empresaId,
     ...(status ? { status } : {}),
+    ...(statusList.length ? { status: { in: statusList } } : {}),
     ...whereDoFiltro(filtro),
+    // Arquivar é só visibilidade (ver comentário do campo no schema): por
+    // padrão a Consulta de Pedidos esconde arquivados, igual ao antigo
+    // comportamento do filtro EM_ABERTO/CANCELADO/LIQUIDADO — quem quiser
+    // vê-los liga o toggle "Exibir arquivados", que manda arquivado=true.
+    arquivado: arquivado ?? false,
     ...(separadorId ? { separadorId } : {}),
+    ...(vendedorId ? { vendedorId } : {}),
+    ...(periodo ? { turno: periodo } : {}),
+    ...(rotaEntregaId ? { rotaEntregaId } : {}),
+    ...(clienteTexto
+      ? {
+          cliente: {
+            participante: {
+              OR: [
+                { razaoSocial: { contains: clienteTexto, mode: "insensitive" } },
+                { cpfCnpj: { contains: clienteTexto } },
+              ],
+            },
+          },
+        }
+      : {}),
     ...(dataInicial || dataFinal
       ? { dataEmissao: { ...(dataInicial ? { gte: dataInicial } : {}), ...(dataFinal ? { lte: dataFinal } : {}) } }
       : {}),

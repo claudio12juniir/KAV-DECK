@@ -1,15 +1,27 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Input } from "../../components/ui/Input.jsx";
 import { searchProdutos } from "./produtosApi.js";
 import "./Autocomplete.css";
 
-export function ProdutoAutocomplete({ onSelecionar, label = "Adicionar produto" }) {
+// forwardRef + useImperativeHandle expõem só um .focus() pro pai — o
+// suficiente pra encadear o loop de lançamento rápido de item do Terminal
+// de Venda (Qtd → Produto → Valor → ...) sem vazar detalhe interno do
+// autocomplete (estado de busca, índice ativo etc.) pra fora do componente.
+export const ProdutoAutocomplete = forwardRef(function ProdutoAutocomplete(
+  { onSelecionar, label = "Adicionar produto" },
+  ref,
+) {
   const [termo, setTermo] = useState("");
   const [resultados, setResultados] = useState([]);
   const [buscando, setBuscando] = useState(false);
   const [aberto, setAberto] = useState(false);
   const [indiceAtivo, setIndiceAtivo] = useState(-1);
   const timeoutRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+  }));
 
   useEffect(() => {
     if (termo.trim().length < 2) {
@@ -58,6 +70,7 @@ export function ProdutoAutocomplete({ onSelecionar, label = "Adicionar produto" 
   return (
     <div className="autocomplete">
       <Input
+        ref={inputRef}
         label={label}
         placeholder="Buscar por código ou descrição..."
         value={termo}
@@ -85,4 +98,4 @@ export function ProdutoAutocomplete({ onSelecionar, label = "Adicionar produto" 
       )}
     </div>
   );
-}
+});

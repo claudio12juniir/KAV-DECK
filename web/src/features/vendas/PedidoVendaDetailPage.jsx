@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiCheckCircle, FiEdit2, FiUser } from "react-icons/fi";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { HistoricoModal } from "../../components/audit/Historico.jsx";
@@ -111,6 +111,27 @@ export function PedidoVendaDetailPage() {
   const [adicionandoItem, setAdicionandoItem] = useState(false);
   const [removendoItemId, setRemovendoItemId] = useState(null);
 
+  // Loop de lançamento 100% por teclado (achado do MAPEAMENTO_VENDAS_SPACESOFT.md,
+  // seção 17.2/17.7 — no balcão de referência é preciso mouse pra confirmar
+  // cada item; aqui Enter avança Qtd → Produto → Valor → Desconto →
+  // Observação → Adicionar, e o sucesso do Adicionar devolve o foco pro Qtd
+  // pra emendar o próximo item sem tocar no mouse nenhuma vez).
+  const qtdInputRef = useRef(null);
+  const produtoAutocompleteRef = useRef(null);
+  const valorInputRef = useRef(null);
+  const descontoInputRef = useRef(null);
+  const observacaoInputRef = useRef(null);
+
+  function focarProximoCampo(e, ref) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    ref.current?.focus();
+  }
+
+  useEffect(() => {
+    if (mostrarAdicionarItem) qtdInputRef.current?.focus();
+  }, [mostrarAdicionarItem]);
+
   const [duplicando, setDuplicando] = useState(false);
   const [arquivando, setArquivando] = useState(false);
   const [mostrarOpcoes, setMostrarOpcoes] = useState(false);
@@ -155,6 +176,14 @@ export function PedidoVendaDetailPage() {
   const [rotaEditar, setRotaEditar] = useState("");
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
+  // `carregar()` é chamado depois de toda mutação (adicionar item, aplicar
+  // desconto, trocar cliente, etc.), não só na entrada da tela — mostrar o
+  // skeleton de página inteira (`carregando`) nesses refreshes fazia a tela
+  // inteira piscar/desmontar a cada item lançado, destruindo o foco do
+  // teclado no meio do loop de lançamento rápido. Só a primeira carga real
+  // (pedido ainda não existe em memória) passa pelo skeleton; um refresh
+  // depois de já ter pedido carregado atualiza os dados "quieto", sem
+  // esconder a tela.
   async function carregar() {
     if (modoCriacao) {
       setPedido(null);
@@ -162,7 +191,8 @@ export function PedidoVendaDetailPage() {
       setCarregando(false);
       return;
     }
-    setCarregando(true);
+    const primeiraCarga = pedido === null;
+    if (primeiraCarga) setCarregando(true);
     setErroCarregar("");
     try {
       const dados = await getPedidoVenda(id);
@@ -170,7 +200,7 @@ export function PedidoVendaDetailPage() {
     } catch (err) {
       setErroCarregar(err.message ?? "Não foi possível carregar este pedido.");
     } finally {
-      setCarregando(false);
+      if (primeiraCarga) setCarregando(false);
     }
   }
 
@@ -362,6 +392,9 @@ export function PedidoVendaDetailPage() {
       setPrecoNovo("0");
       setDescontoNovo("0");
       setObservacaoNova("");
+      // Fecha o loop de lançamento rápido: volta o foco pro Qtd pra emendar
+      // o próximo item sem precisar clicar de novo na barra inline.
+      qtdInputRef.current?.focus();
       await carregar();
     } catch (err) {
       toast.error(err.message ?? "Não foi possível adicionar o item.");
@@ -785,13 +818,25 @@ export function PedidoVendaDetailPage() {
           <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid var(--color-border)" }}>
             <h4 style={{ marginTop: 0 }}>Adicionar Item ao Pedido Manualmente</h4>
             <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap" }}>
-              <Input label="Qtd." type="number" style={{ width: "90px" }} value={quantidadeNova} onChange={(e) => setQuantidadeNova(e.target.value)} />
+              <Input
+                ref={qtdInputRef}
+                label="Qtd."
+                type="number"
+                style={{ width: "90px" }}
+                value={quantidadeNova}
+                onChange={(e) => setQuantidadeNova(e.target.value)}
+                onKeyDown={(e) => focarProximoCampo(e, produtoAutocompleteRef)}
+              />
               <div style={{ flex: 1, minWidth: "240px" }}>
                 <ProdutoAutocomplete
+                  ref={produtoAutocompleteRef}
                   label="Produto ((Ctrl+P) - Pesquisar produto)"
                   onSelecionar={(produto) => {
                     setProdutoNovo(produto);
                     setPrecoNovo(String(produto.precoReferencia ?? 0));
+                    // Confirmar o produto já avança o foco pro próximo campo
+                    // do loop — o vendedor nunca precisa voltar pro mouse.
+                    valorInputRef.current?.focus();
                   }}
                 />
                 {produtoNovo && (
@@ -801,15 +846,37 @@ export function PedidoVendaDetailPage() {
                 )}
               </div>
               <Input
+                ref={valorInputRef}
                 label="Valor unitário"
                 type="number"
                 style={{ width: "120px" }}
                 value={precoNovo}
                 onChange={(e) => setPrecoNovo(e.target.value)}
+                onKeyDown={(e) => focarProximoCampo(e, descontoInputRef)}
                 hint={Number(precoNovo) === 0 ? "Item a R$ 0,00 — confira se é bonificação." : undefined}
               />
-              <Input label="Desconto" type="number" style={{ width: "110px" }} value={descontoNovo} onChange={(e) => setDescontoNovo(e.target.value)} />
-              <Input label="Observação" style={{ width: "180px" }} value={observacaoNova} onChange={(e) => setObservacaoNova(e.target.value)} />
+              <Input
+                ref={descontoInputRef}
+                label="Desconto"
+                type="number"
+                style={{ width: "110px" }}
+                value={descontoNovo}
+                onChange={(e) => setDescontoNovo(e.target.value)}
+                onKeyDown={(e) => focarProximoCampo(e, observacaoInputRef)}
+              />
+              <Input
+                ref={observacaoInputRef}
+                label="Observação"
+                style={{ width: "180px" }}
+                value={observacaoNova}
+                onChange={(e) => setObservacaoNova(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && produtoNovo) {
+                    e.preventDefault();
+                    handleAdicionarItem();
+                  }
+                }}
+              />
               <Button onClick={handleAdicionarItem} loading={adicionandoItem} disabled={!produtoNovo}>
                 Adicionar
               </Button>
