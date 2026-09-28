@@ -1,5 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import { FiCheckCircle, FiEdit2, FiUser } from "react-icons/fi";
+import {
+  FiCheckCircle,
+  FiClipboard,
+  FiDollarSign,
+  FiDownload,
+  FiEdit2,
+  FiGrid,
+  FiList,
+  FiPlus,
+  FiPrinter,
+  FiRefreshCw,
+  FiSearch,
+  FiSettings,
+  FiShoppingBag,
+  FiStar,
+  FiTruck,
+  FiUpload,
+  FiUser,
+  FiX,
+} from "react-icons/fi";
+import { TbArrowsSort } from "react-icons/tb";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { HistoricoModal } from "../../components/audit/Historico.jsx";
 import { Button } from "../../components/ui/Button.jsx";
@@ -598,27 +618,43 @@ export function PedidoVendaDetailPage() {
 
   return (
     <div>
-      {/* Barra de topo — Novo/Atualizar/Imprimir/Download/Opções, seção 2.1 do mapeamento */}
+      {/* Barra de topo — Novo/Atualizar/Imprimir/Download/Opções, seção 2.1 do mapeamento.
+          Cluster de 3 ícones à esquerda (lista/grade/busca) copia a forma da
+          referência; só "lista" tem função real hoje (voltar pra Consulta de
+          Pedidos) — grade/busca ficam visíveis mas inertes, mesmo padrão de
+          "copiar o layout sem inventar comportamento" já usado no resto do arquivo. */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "8px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <Link to="/vendas" title="Ver consulta de pedidos">
-            ☰ Consulta
-          </Link>
-          <h2 style={{ margin: 0 }}>Terminal de Venda</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <Link to="/vendas" className="icon-btn" title="Ver consulta de pedidos">
+              <FiList />
+            </Link>
+            <span className="icon-btn" style={{ cursor: "default", opacity: 0.5 }} title="Visualização em grade">
+              <FiGrid />
+            </span>
+            <span className="icon-btn" style={{ cursor: "default", opacity: 0.5 }} title="Pesquisar por número">
+              <FiSearch />
+            </span>
+          </div>
+          <h2 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px", color: "var(--color-accent-hover)" }}>
+            <FiShoppingBag /> Terminal de Venda
+          </h2>
         </div>
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           <Link to="/vendas/novo">
-            <Button variant="secondary">+ Novo</Button>
+            <Button variant="secondary">
+              <FiPlus /> Novo
+            </Button>
           </Link>
           <Button variant="ghost" onClick={carregar} disabled={modoCriacao}>
-            Atualizar
+            <FiRefreshCw /> Atualizar
           </Button>
           <Button variant="ghost" onClick={abrirHistorico} disabled={modoCriacao}>
             Histórico
           </Button>
           <div style={{ position: "relative" }}>
             <Button variant="ghost" onClick={() => setMostrarImprimir((v) => !v)} disabled={modoCriacao}>
-              Imprimir ▾
+              <FiPrinter /> Imprimir ▾
             </Button>
             {mostrarImprimir && (
               <DropdownMenu
@@ -629,11 +665,11 @@ export function PedidoVendaDetailPage() {
             )}
           </div>
           <Button variant="ghost" onClick={stub("Download")} disabled={modoCriacao}>
-            Download
+            <FiDownload /> Download
           </Button>
           <div style={{ position: "relative" }}>
             <Button variant="ghost" onClick={() => setMostrarOpcoes((v) => !v)} disabled={modoCriacao}>
-              Opções ▾
+              <FiSettings /> Opções ▾
             </Button>
             {mostrarOpcoes && pedido && (
               <DropdownMenu
@@ -649,6 +685,17 @@ export function PedidoVendaDetailPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* "Venda Nº" / "R$" — cabeçalho da referência acima do quadro do
+          cliente. KAV DECK não tem numeração sequencial de pedido (só uuid),
+          então mostramos os 8 primeiros caracteres do id como identificador
+          curto em vez de inventar um número sequencial que não existe. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+        <div style={{ fontWeight: 700, color: "var(--color-accent-hover)" }}>
+          Venda Nº{pedido ? ` ${pedido.id.slice(0, 8).toUpperCase()}` : ""}
+        </div>
+        <div style={{ fontWeight: 700, color: "var(--color-accent-hover)" }}>R$</div>
       </div>
 
       {/* Duplicar/Arquivar não existem no menu Opções da referência (lá são
@@ -689,21 +736,34 @@ export function PedidoVendaDetailPage() {
               + Novo cliente
             </a>
           </div>
-          <div>
-            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase" }}>Emissão</div>
-            <div>{formatarData(pedido ? pedido.dataEmissao : new Date().toISOString())}</div>
-            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase", marginTop: "8px" }}>
-              Saída / Entrega
+          <div style={{ display: "flex", gap: "8px" }}>
+            <span className="icon-btn" style={{ cursor: "default" }} title="Emissão e saída/entrega">
+              <FiEdit2 />
+            </span>
+            <div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase" }}>Emissão</div>
+              <div>{formatarData(pedido ? pedido.dataEmissao : new Date().toISOString())}</div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase", marginTop: "8px" }}>
+                Saída / Entrega
+              </div>
+              <div>{pedido?.turno ? TURNO_LABEL[pedido.turno] ?? pedido.turno : "Não definido"}</div>
             </div>
-            <div>{pedido?.turno ? TURNO_LABEL[pedido.turno] ?? pedido.turno : "Não definido"}</div>
           </div>
           <div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase" }}>Vendedor/Representante</div>
-            <div>{pedido?.vendedor?.nome ?? "Não atribuído"}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span className="icon-btn" style={{ cursor: "default", width: "24px", height: "24px", fontSize: "12px" }}>
+                <FiUser />
+              </span>
+              <span>{pedido?.vendedor?.nome ?? "Não atribuído"}</span>
+            </div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase", marginTop: "8px" }}>
               Separador
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span className="icon-btn" style={{ cursor: "default", width: "24px", height: "24px", fontSize: "12px" }}>
+                <FiUser />
+              </span>
               <span>{pedido?.separador?.nome ?? "Não atribuído"}</span>
               {pedido && (
                 <button type="button" className="autocomplete-trocar" onClick={handleTrocarSeparador}>
@@ -746,12 +806,12 @@ export function PedidoVendaDetailPage() {
             </Button>
             {podeEditarItens && (
               <Button variant={mostrarAdicionarItem ? "secondary" : "ghost"} onClick={() => setMostrarAdicionarItem((v) => !v)}>
-                + Adicionar itens
+                <FiPlus /> Adicionar itens
               </Button>
             )}
             <div style={{ position: "relative" }}>
               <Button variant="ghost" onClick={abrirFavoritos} disabled={!pedido}>
-                Favoritos
+                <FiStar /> Favoritos
               </Button>
               {mostrarFavoritos && (
                 <DropdownMenu
@@ -765,14 +825,14 @@ export function PedidoVendaDetailPage() {
               )}
             </div>
             <Button variant="ghost" onClick={abrirModalImportar} disabled={!pedido}>
-              Importar
+              <FiUpload /> Importar
             </Button>
             <Button variant="ghost" onClick={stub("Perfil do pedido")}>
-              Perfil do pedido
+              <FiClipboard /> Perfil do pedido
             </Button>
             <div style={{ position: "relative" }}>
               <Button variant="ghost" onClick={() => setMostrarAplicarPreco((v) => !v)}>
-                $ Aplicar preço ▾
+                <FiDollarSign /> Aplicar preço ▾
               </Button>
               {mostrarAplicarPreco && (
                 <DropdownMenu items={["Cadastro", "Selecionar Tabela"]} onSelect={stub("Aplicar preço")} onClose={() => setMostrarAplicarPreco(false)} />
@@ -780,7 +840,7 @@ export function PedidoVendaDetailPage() {
             </div>
             <div style={{ position: "relative" }}>
               <Button variant="ghost" onClick={() => setMostrarConfiguracoes((v) => !v)}>
-                ⚙ ▾
+                <FiSettings /> ▾
               </Button>
               {mostrarConfiguracoes && (
                 <DropdownMenu
@@ -792,7 +852,7 @@ export function PedidoVendaDetailPage() {
             </div>
             <div style={{ position: "relative" }}>
               <Button variant="ghost" onClick={() => setMostrarOrdenar((v) => !v)}>
-                ↕ ▾
+                <TbArrowsSort /> ▾
               </Button>
               {mostrarOrdenar && (
                 <DropdownMenu
@@ -816,7 +876,23 @@ export function PedidoVendaDetailPage() {
 
         {mostrarAdicionarItem && podeEditarItens && (
           <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid var(--color-border)" }}>
-            <h4 style={{ marginTop: 0 }}>Adicionar Item ao Pedido Manualmente</h4>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ margin: 0, color: "var(--color-accent-hover)" }}>Adicionar Item ao Pedido Manualmente</h4>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <span className="icon-btn" style={{ cursor: "default", width: "28px", height: "28px", fontSize: "13px" }} title="Preferências do lançamento">
+                  <FiSettings />
+                </span>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  style={{ width: "28px", height: "28px", fontSize: "13px" }}
+                  title="Fechar"
+                  onClick={() => setMostrarAdicionarItem(false)}
+                >
+                  <FiX />
+                </button>
+              </div>
+            </div>
             <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap" }}>
               <Input
                 ref={qtdInputRef}
@@ -886,13 +962,26 @@ export function PedidoVendaDetailPage() {
       </Card>
 
       {/* Rodapé — Volumes/Peso líquido/Peso bruto (sem dado real, gap
-          documentado no topo do arquivo) + equação de total (com dado real) */}
+          documentado no topo do arquivo) + toggles Fat. auto/Boleto auto
+          (seção 2.4 do mapeamento — automação de faturamento/boleto que o
+          KAV DECK ainda não implementa; mostrados desligados, iguais à
+          referência, em vez de somem do layout) + equação de total (com
+          dado real). */}
       <Card style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-          <div style={{ display: "flex", gap: "24px", color: "var(--color-text-faint)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "24px", color: "var(--color-text-faint)" }}>
+            <span className="icon-btn" style={{ cursor: "default" }} title="Volumes / peso">
+              <FiTruck />
+            </span>
             <span>Volumes: —</span>
             <span>Peso líquido: —</span>
             <span>Peso bruto: —</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "var(--color-danger)" }}>
+              <FiX /> Fat. auto
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "var(--color-danger)" }}>
+              <FiX /> Boleto auto
+            </span>
           </div>
           <div style={{ textAlign: "right" }}>
             Valor dos produtos: <strong>{formatarMoeda(valorProdutos)}</strong>

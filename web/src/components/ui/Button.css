@@ -16,6 +16,16 @@
   white-space: nowrap;
 }
 
+/* Children ficam dentro de um único <span> (ver Button.jsx) — sem isto, um
+   ícone Feather seguido de texto (`<FiPlus /> Novo`) cola sem espaço, já
+   que o `gap` do .btn só separa esse span do spinner, não o que está
+   dentro dele. */
+.btn > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
