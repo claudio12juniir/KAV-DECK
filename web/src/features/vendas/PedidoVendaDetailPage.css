@@ -1,0 +1,39 @@
+/* Impressão do Terminal de Venda — mesma estratégia de RelatoriosPage.css/
+   UtilitariosFiscaisPage.jsx: impressão nativa do navegador ("Salvar como
+   PDF" é a própria opção de destino do diálogo) em vez de gerar PDF em JS.
+   `.no-print` esconde interface que só faz sentido na tela (botões, barras
+   de ferramenta, ícones de ação); `.venda-print-only` mostra o oposto —
+   grid/blocos que só fazem sentido no papel — e fica escondido na tela. */
+.venda-print-only {
+  display: none;
+}
+
+.venda-canhoto,
+.venda-recibo {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--color-border-strong);
+}
+
+.venda-canhoto-corte {
+  text-align: center;
+  color: var(--color-text-faint);
+  margin-bottom: var(--space-4);
+  letter-spacing: 0.05em;
+}
+
+.venda-assinatura {
+  margin-top: var(--space-5);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .venda-print-only {
+    display: block;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

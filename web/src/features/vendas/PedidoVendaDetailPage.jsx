@@ -57,6 +57,7 @@ import {
 } from "./api.js";
 import { ClienteAutocomplete } from "./components/ClienteAutocomplete.jsx";
 import { StatusBadge } from "./components/StatusBadge.jsx";
+import "./PedidoVendaDetailPage.css";
 
 const ROTULOS_TRANSICAO = { CANCELADO: "Cancelar pedido" };
 const TURNO_LABEL = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite", SOS: "SOS", RETIRA: "Retira" };
@@ -78,12 +79,20 @@ function formatarData(iso) {
 // colunas exatas (inclusive Embalado) e rodapé com Volumes/Peso.
 //
 // Nem todo botão tem motor por trás ainda — os que não têm (Favoritos,
-// Importar, Perfil do pedido, Aplicar preço, Configurações, Download,
-// Importar pedidos, Aplicar outras despesas, Integração Filial, Logs,
-// coluna Embalado, Volumes/Peso líquido/Peso bruto) ficam visíveis no
-// layout igual à referência, mas avisam via toast que ainda não fazem nada
-// nesta versão — o pedido explícito aqui foi "copie o layout", não inventar
-// dado ou comportamento que o KAV DECK não tem de verdade.
+// Importar, Perfil do pedido, Aplicar preço, Configurações, Importar
+// pedidos, Aplicar outras despesas, Integração Filial, Logs, coluna
+// Embalado, Volumes/Peso líquido/Peso bruto) ficam visíveis no layout igual
+// à referência, mas avisam via toast que ainda não fazem nada nesta versão
+// — o pedido explícito aqui foi "copie o layout", não inventar dado ou
+// comportamento que o KAV DECK não tem de verdade.
+//
+// Imprimir/Download SÃO reais (ver `imprimirPedido` mais abaixo): usam a
+// impressão nativa do navegador — "Salvar como PDF" é a própria opção de
+// destino do diálogo — em vez de gerar PDF em JS, mesma estratégia de
+// RelatoriosPage.css/UtilitariosFiscaisPage.jsx. Cada formato do menu
+// (Padrão, Cupom, Pedido com canhoto, Recibo, Via Separador) troca as
+// colunas da grid impressa e o bloco de fechamento via `formatoImpressao`,
+// sempre a partir do MESMO pedido carregado em tela — ver PedidoVendaDetailPage.css.
 export function PedidoVendaDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -156,6 +165,7 @@ export function PedidoVendaDetailPage() {
   const [arquivando, setArquivando] = useState(false);
   const [mostrarOpcoes, setMostrarOpcoes] = useState(false);
   const [mostrarImprimir, setMostrarImprimir] = useState(false);
+  const [formatoImpressao, setFormatoImpressao] = useState("padrao");
   const [mostrarAplicarPreco, setMostrarAplicarPreco] = useState(false);
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);
   const [mostrarOrdenar, setMostrarOrdenar] = useState(false);
@@ -360,6 +370,33 @@ export function PedidoVendaDetailPage() {
       setTransicaoEmAndamento(null);
       setConfirmarCancelamento(false);
     }
+  }
+
+  const FORMATOS_IMPRESSAO = {
+    Padrão: "padrao",
+    Cupom: "cupom",
+    "Pedido com canhoto": "canhoto",
+    Recibo: "recibo",
+    "Via Separador": "separador",
+  };
+
+  // Reaproveita a impressão nativa do navegador — "Salvar como PDF" já é a
+  // própria opção de destino do diálogo — em vez de puxar jsPDF/html2canvas
+  // ou montar um serviço de geração de PDF no backend só pra isso; mesma
+  // estratégia de RelatoriosPage.css/UtilitariosFiscaisPage.jsx. O
+  // setTimeout dá tempo do React aplicar `formatoImpressao` no DOM (troca
+  // de colunas/bloco de fechamento) antes do window.print() tirar o
+  // "retrato" da página.
+  function imprimirPedido(formato) {
+    setMostrarImprimir(false);
+    setFormatoImpressao(formato);
+    setTimeout(() => {
+      const tituloOriginal = document.title;
+      const numero = pedido ? pedido.id.slice(0, 8).toUpperCase() : "";
+      document.title = `KAV DECK - Pedido de Venda ${numero}`.trim();
+      window.print();
+      document.title = tituloOriginal;
+    }, 50);
   }
 
   function stub(nomeRecurso) {
@@ -616,6 +653,21 @@ export function PedidoVendaDetailPage() {
       : []),
   ];
 
+  // Grid impressa é um clone com colunas por formato — Cupom mostra só o
+  // essencial de um comprovante de venda, Via Separador esconde preço/
+  // desconto (quem separa mercadoria não precisa ver valor); Padrão/
+  // Canhoto/Recibo levam a grid completa menos as colunas só-de-tela
+  // (ações de remover item, saldo de estoque). Nunca aparece na tela —
+  // fica em `.venda-print-only` (ver PedidoVendaDetailPage.css) — só entra
+  // no papel/PDF quando o usuário efetivamente imprime.
+  const CHAVES_IMPRESSAO = {
+    cupom: ["quantidade", "und", "produto", "valor", "parcial"],
+    separador: ["quantidade", "und", "produto", "observacao", "lote", "embalado"],
+  };
+  const colunasImpressao = CHAVES_IMPRESSAO[formatoImpressao]
+    ? columns.filter((col) => CHAVES_IMPRESSAO[formatoImpressao].includes(col.key))
+    : columns.filter((col) => !["_acoes", "saldoEstoque"].includes(col.key));
+
   return (
     <div>
       {/* Barra de topo — Novo/Atualizar/Imprimir/Download/Opções, seção 2.1 do mapeamento.
@@ -623,7 +675,7 @@ export function PedidoVendaDetailPage() {
           referência; só "lista" tem função real hoje (voltar pra Consulta de
           Pedidos) — grade/busca ficam visíveis mas inertes, mesmo padrão de
           "copiar o layout sem inventar comportamento" já usado no resto do arquivo. */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "8px" }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "8px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <Link to="/vendas" className="icon-btn" title="Ver consulta de pedidos">
@@ -658,13 +710,13 @@ export function PedidoVendaDetailPage() {
             </Button>
             {mostrarImprimir && (
               <DropdownMenu
-                items={["Padrão", "Cupom", "Pedido com canhoto", "Recibo", "Via Separador"]}
-                onSelect={stub("Impressão")}
+                items={Object.keys(FORMATOS_IMPRESSAO)}
+                onSelect={(label) => imprimirPedido(FORMATOS_IMPRESSAO[label])}
                 onClose={() => setMostrarImprimir(false)}
               />
             )}
           </div>
-          <Button variant="ghost" onClick={stub("Download")} disabled={modoCriacao}>
+          <Button variant="ghost" onClick={() => imprimirPedido("padrao")} disabled={modoCriacao}>
             <FiDownload /> Download
           </Button>
           <div style={{ position: "relative" }}>
@@ -703,7 +755,7 @@ export function PedidoVendaDetailPage() {
           utilitários secundários do KAV DECK, fora da barra copiada 1:1.
           Não fazem sentido em modoCriacao (nada pra duplicar/arquivar ainda). */}
       {pedido && (
-        <div style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
+        <div className="no-print" style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
           <button type="button" className="autocomplete-trocar" onClick={handleDuplicar} disabled={duplicando}>
             {duplicando ? "Duplicando..." : "Duplicar pedido"}
           </button>
@@ -720,7 +772,7 @@ export function PedidoVendaDetailPage() {
           <div>
             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", textTransform: "uppercase" }}>Cliente</div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <button type="button" className="icon-btn" title="Alterar cliente" onClick={() => setModalClienteAberto(true)}>
+              <button type="button" className="icon-btn no-print" title="Alterar cliente" onClick={() => setModalClienteAberto(true)}>
                 <FiUser />
               </button>
               {pedido ? (
@@ -732,7 +784,7 @@ export function PedidoVendaDetailPage() {
                 <div style={{ color: "var(--color-text-faint)" }}>Selecionar cliente</div>
               )}
             </div>
-            <a href="/participantes/clientes" target="_blank" rel="noreferrer" style={{ fontSize: "var(--text-xs)" }}>
+            <a href="/participantes/clientes" target="_blank" rel="noreferrer" className="no-print" style={{ fontSize: "var(--text-xs)" }}>
               + Novo cliente
             </a>
           </div>
@@ -766,7 +818,7 @@ export function PedidoVendaDetailPage() {
               </span>
               <span>{pedido?.separador?.nome ?? "Não atribuído"}</span>
               {pedido && (
-                <button type="button" className="autocomplete-trocar" onClick={handleTrocarSeparador}>
+                <button type="button" className="autocomplete-trocar no-print" onClick={handleTrocarSeparador}>
                   Trocar
                 </button>
               )}
@@ -774,7 +826,7 @@ export function PedidoVendaDetailPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
             {pedido && (
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div className="no-print" style={{ display: "flex", gap: "8px" }}>
                 <button type="button" className="icon-btn" title="Editar Pedido de Venda" onClick={abrirModalEditar}>
                   <FiEdit2 />
                 </button>
@@ -800,7 +852,7 @@ export function PedidoVendaDetailPage() {
       <Card style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
           <h3 style={{ margin: 0 }}>Itens ({itensPedido.length})</h3>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <div className="no-print" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <Button variant={exibirEstoque ? "secondary" : "ghost"} onClick={() => setExibirEstoque((v) => !v)}>
               Exibir estoque
             </Button>
@@ -869,13 +921,61 @@ export function PedidoVendaDetailPage() {
         </div>
 
         {pedido ? (
-          <DataTable columns={columns} rows={itensOrdenados} emptyMessage="Pedido sem itens." />
+          <div className="no-print">
+            <DataTable columns={columns} rows={itensOrdenados} emptyMessage="Pedido sem itens." />
+          </div>
         ) : (
-          <p style={{ color: "var(--color-text-faint)" }}>Selecione um cliente acima para começar a adicionar itens.</p>
+          <p className="no-print" style={{ color: "var(--color-text-faint)" }}>Selecione um cliente acima para começar a adicionar itens.</p>
+        )}
+
+        {/* Grid impressa — só existe dentro de @media print (.venda-print-only,
+            ver PedidoVendaDetailPage.css), nunca aparece na tela. Colunas e
+            bloco de fechamento variam com `formatoImpressao` (ver imprimirPedido
+            e colunasImpressao acima). */}
+        {pedido && (
+          <div className="venda-print-only">
+            {(formatoImpressao === "cupom" || formatoImpressao === "separador") && (
+              <h4 style={{ marginTop: 0 }}>
+                {formatoImpressao === "cupom" ? "Cupom não fiscal" : "Via separador — lista de separação"}
+              </h4>
+            )}
+            <DataTable columns={colunasImpressao} rows={itensOrdenados} emptyMessage="Pedido sem itens." />
+            {formatoImpressao === "canhoto" && (
+              <div className="venda-canhoto">
+                <div className="venda-canhoto-corte">
+                  ✂ — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — —
+                </div>
+                <p>
+                  <strong>Canhoto de entrega</strong> — Pedido Nº {pedido.id.slice(0, 8).toUpperCase()}
+                </p>
+                <p>Cliente: {pedido.cliente.participante.razaoSocial}</p>
+                <p>
+                  Data: {formatarData(pedido.dataEmissao)} — Valor total: {formatarMoeda(valorTotal)}
+                </p>
+                <p>Declaro ter recebido os produtos acima descritos em perfeitas condições.</p>
+                <p className="venda-assinatura">Assinatura: ______________________________ &nbsp;&nbsp; Data: ____/____/______</p>
+              </div>
+            )}
+            {formatoImpressao === "recibo" && (
+              <div className="venda-recibo">
+                <p>
+                  Recibo referente ao Pedido de Venda Nº {pedido.id.slice(0, 8).toUpperCase()}, cliente{" "}
+                  {pedido.cliente.participante.razaoSocial}, emitido em {formatarData(pedido.dataEmissao)}, no valor de{" "}
+                  <strong>{formatarMoeda(valorTotal)}</strong>.
+                </p>
+                <p className="venda-assinatura">
+                  Assinatura do cliente: ______________________________ &nbsp;&nbsp; Data: ____/____/______
+                </p>
+              </div>
+            )}
+            {formatoImpressao === "separador" && (
+              <p className="venda-assinatura">Separado por: ______________________________ &nbsp;&nbsp; Data: ____/____/______</p>
+            )}
+          </div>
         )}
 
         {mostrarAdicionarItem && podeEditarItens && (
-          <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid var(--color-border)" }}>
+          <div className="no-print" style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid var(--color-border)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h4 style={{ margin: 0, color: "var(--color-accent-hover)" }}>Adicionar Item ao Pedido Manualmente</h4>
               <div style={{ display: "flex", gap: "8px" }}>
@@ -969,7 +1069,7 @@ export function PedidoVendaDetailPage() {
           dado real). */}
       <Card style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "24px", color: "var(--color-text-faint)" }}>
+          <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "24px", color: "var(--color-text-faint)" }}>
             <span className="icon-btn" style={{ cursor: "default" }} title="Volumes / peso">
               <FiTruck />
             </span>
@@ -994,7 +1094,7 @@ export function PedidoVendaDetailPage() {
       </Card>
 
       {pedido && (podeFaturar || podeCancelar) && (
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+        <div className="no-print" style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           {podeFaturar && (
             <Link to={`/vendas/${id}/faturar`}>
               <Button>Faturar pedido</Button>
