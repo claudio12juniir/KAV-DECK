@@ -330,8 +330,15 @@ export function AppShell() {
           </nav>
 
           <div className="app-user">
-            <span className="app-user-avatar">{iniciais(me?.nome)}</span>
-            <span className="app-user-nome">{me?.nome ?? "..."}</span>
+            <button
+              type="button"
+              className="app-user-info"
+              onClick={() => navigate("/minha-conta")}
+              title="Minha Conta"
+            >
+              <span className="app-user-avatar">{iniciais(me?.nome)}</span>
+              <span className="app-user-nome">{me?.nome ?? "..."}</span>
+            </button>
             <button className="app-user-sair" onClick={signOut} title="Sair">
               <FiLogOut />
             </button>

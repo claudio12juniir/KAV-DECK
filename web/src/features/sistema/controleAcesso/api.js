@@ -7,6 +7,7 @@ export const controleAcessoApi = {
     apiClient.patch(`/sistema/controle-acesso/${usuarioId}`, { modulo, acao, permitida }),
   removerOverride: (usuarioId, modulo, acao) =>
     apiClient.delete(`/sistema/controle-acesso/${usuarioId}/${modulo}/${acao}`),
+  desativarMfa: (usuarioId) => apiClient.post(`/sistema/controle-acesso/${usuarioId}/desativar-mfa`),
 };
 
 export const sessoesApi = {

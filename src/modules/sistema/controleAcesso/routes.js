@@ -29,3 +29,9 @@ router.post(
   validate({ params: usuarioIdParamSchema, body: redefinirSenhaSchema }),
   controller.redefinirSenha,
 );
+router.post(
+  "/:usuarioId/desativar-mfa",
+  requireRole("ADMIN"),
+  validate({ params: usuarioIdParamSchema }),
+  controller.desativarMfa,
+);

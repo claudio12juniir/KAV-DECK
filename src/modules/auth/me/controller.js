@@ -23,3 +23,13 @@ export const releaseSessao = asyncHandler(async (req, res) => {
   });
   res.status(204).end();
 });
+
+export const ativarMfa = asyncHandler(async (req, res) => {
+  await service.ativarMfa({ usuarioId: req.user.id, aal: req.supabaseAal });
+  res.status(204).end();
+});
+
+export const desativarMfa = asyncHandler(async (req, res) => {
+  await service.desativarMfa({ usuarioId: req.user.id });
+  res.status(204).end();
+});

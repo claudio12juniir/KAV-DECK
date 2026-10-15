@@ -17,6 +17,11 @@ export function AuthProvider({ children }) {
   // encerrarSessaoLocal, porque o usuário precisa dela pra terminar o
   // cadastro/pagamento em /criar-conta.
   const [precisaFinalizarCadastro, setPrecisaFinalizarCadastro] = useState(false);
+  // true quando a senha já foi confirmada mas a conta tem 2FA ativo e esta
+  // sessão ainda está em aal1 — ver src/middlewares/auth.js (MFA_REQUIRED).
+  // Igual a precisaFinalizarCadastro: mantém a sessão válida de propósito,
+  // só redireciona pra tela de desafio em vez de deslogar (ver App.jsx).
+  const [precisaConfirmarMfa, setPrecisaConfirmarMfa] = useState(false);
 
   async function encerrarSessaoLocal(motivo) {
     clearSessionId();
@@ -48,6 +53,10 @@ export function AuthProvider({ children }) {
           if (ativo) setPrecisaFinalizarCadastro(true);
           return true;
         }
+        if (err.code === "MFA_REQUIRED") {
+          if (ativo) setPrecisaConfirmarMfa(true);
+          return true;
+        }
         // Melhor esforço: se o claim falhar por outro motivo (rede etc.), a
         // checagem de sessão única simplesmente não vai bloquear ninguém
         // até o próximo.
@@ -57,6 +66,7 @@ export function AuthProvider({ children }) {
 
     async function carregarMe() {
       if (ativo) setPrecisaFinalizarCadastro(false);
+      if (ativo) setPrecisaConfirmarMfa(false);
       const bloqueado = await reivindicarSessao();
       if (bloqueado) return;
       try {
@@ -134,6 +144,7 @@ export function AuthProvider({ children }) {
         limparAvisoSessaoEncerrada,
         encerrarSessaoLocal,
         precisaFinalizarCadastro,
+        precisaConfirmarMfa,
       }}
     >
       {children}

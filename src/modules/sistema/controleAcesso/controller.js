@@ -45,3 +45,11 @@ export const redefinirSenha = asyncHandler(async (req, res) => {
   });
   res.json(resultado);
 });
+
+export const desativarMfa = asyncHandler(async (req, res) => {
+  const resultado = await service.desativarMfa({
+    empresaId: req.user.empresaId,
+    usuarioId: req.params.usuarioId,
+  });
+  res.json(resultado);
+});

@@ -314,6 +314,11 @@ model Usuario {
   email          String      @unique
   role           RoleUsuario
   ativo          Boolean     @default(true)
+  // true só depois que o usuário conclui o enroll de TOTP no Supabase (ver
+  // POST /me/mfa/ativar) — é o que o middleware `auth` usa pra exigir
+  // aal2 na sessão em toda request, sem precisar da service_role key da
+  // Supabase (a aal já vem no próprio JWT). Ver src/middlewares/auth.js.
+  mfaAtivo       Boolean     @default(false) @map("mfa_ativo")
   ultimoAcessoEm DateTime?   @map("ultimo_acesso_em")
   criadoEm       DateTime    @default(now()) @map("criado_em")
   atualizadoEm   DateTime    @updatedAt @map("atualizado_em")

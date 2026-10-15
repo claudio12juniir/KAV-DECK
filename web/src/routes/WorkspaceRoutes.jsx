@@ -61,6 +61,7 @@ import { TransportadorasPage } from "../features/participantes/transportadoras/T
 import { RelatoriosPage } from "../features/gerenciais/relatorios/RelatoriosPage.jsx";
 import { AnalyticsPage } from "../features/gerenciais/analytics/AnalyticsPage.jsx";
 import { DashboardGerencialPage } from "../features/gerenciais/dashboardGerencial/DashboardGerencialPage.jsx";
+import { MinhaContaPage } from "../features/conta/MinhaContaPage.jsx";
 import { AssinaturaPage } from "../features/sistema/assinatura/AssinaturaPage.jsx";
 import { ControleAcessoPage } from "../features/sistema/controleAcesso/ControleAcessoPage.jsx";
 import { MinhaEmpresaPage } from "../features/sistema/minhaEmpresa/MinhaEmpresaPage.jsx";
@@ -192,6 +193,7 @@ export function WorkspaceRoutes() {
       <Route path="/sistema/controle-acesso" element={<ControleAcessoPage />} />
       <Route path="/sistema/minha-empresa" element={<MinhaEmpresaPage />} />
       <Route path="/sistema/assinatura" element={<AssinaturaPage />} />
+      <Route path="/minha-conta" element={<MinhaContaPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -6,13 +6,16 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import { RealtimeProvider } from "./contexts/RealtimeContext.jsx";
 import { supabase } from "./lib/supabaseClient.js";
 import { EntradaPage } from "./features/auth/EntradaPage.jsx";
+import { EsqueciSenhaPage } from "./features/auth/EsqueciSenhaPage.jsx";
 import { LoginPage } from "./features/auth/LoginPage.jsx";
+import { MfaChallengePage } from "./features/auth/MfaChallengePage.jsx";
 import { PrivacidadePage } from "./features/auth/PrivacidadePage.jsx";
 import { RedefinirSenhaPage } from "./features/auth/RedefinirSenhaPage.jsx";
 import { CriarContaPage } from "./features/cadastro/CriarContaPage.jsx";
 
 function PreAuthRoutes() {
-  const { session, me, precisaFinalizarCadastro, sessaoEncerradaMotivo, limparAvisoSessaoEncerrada } = useAuth();
+  const { session, me, precisaFinalizarCadastro, precisaConfirmarMfa, sessaoEncerradaMotivo, limparAvisoSessaoEncerrada } =
+    useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -39,6 +42,7 @@ function PreAuthRoutes() {
     <Routes>
       <Route path="/entrada" element={session ? <Navigate to="/" replace /> : <EntradaPage />} />
       <Route path="/login" element={session ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/esqueci-senha" element={session ? <Navigate to="/" replace /> : <EsqueciSenhaPage />} />
       {/* Não gateia por `session`/`me` de propósito — ver comentário original
           preservado abaixo, ainda vale: a sessão de recuperação já existe
           nesse ponto, mas isso não deveria empurrar o usuário pra lugar
@@ -47,13 +51,16 @@ function PreAuthRoutes() {
       <Route path="/criar-conta" element={me ? <Navigate to="/" replace /> : <CriarContaPage />} />
       <Route path="/privacidade" element={<PrivacidadePage />} />
       {/* Qualquer outra URL enquanto não autenticado — AppGate só entra aqui
-          quando falta login, falta terminar o cadastro, ou a assinatura
-          está pendente (ver `precisaFinalizarCadastro` em AuthContext.jsx). */}
+          quando falta login, falta terminar o cadastro, a assinatura está
+          pendente, ou falta confirmar o 2FA (ver `precisaFinalizarCadastro`
+          e `precisaConfirmarMfa` em AuthContext.jsx). */}
       <Route
         path="*"
         element={
           !session ? (
             <Navigate to="/entrada" replace />
+          ) : precisaConfirmarMfa ? (
+            <MfaChallengePage />
           ) : precisaFinalizarCadastro ? (
             <Navigate to="/criar-conta" replace />
           ) : null
@@ -69,12 +76,12 @@ function PreAuthRoutes() {
 // `/redefinir-senha` é a única exceção: mesmo com sessão válida (a de
 // recuperação), sempre passa por PreAuthRoutes primeiro.
 function AppGate() {
-  const { session, me, loading, precisaFinalizarCadastro } = useAuth();
+  const { session, me, loading, precisaFinalizarCadastro, precisaConfirmarMfa } = useAuth();
 
   if (loading) return null;
 
   const rotaRecuperacaoSenha = window.location.pathname === "/redefinir-senha";
-  const autenticado = !rotaRecuperacaoSenha && session && me && !precisaFinalizarCadastro;
+  const autenticado = !rotaRecuperacaoSenha && session && me && !precisaFinalizarCadastro && !precisaConfirmarMfa;
 
   return <Router>{autenticado ? <AppShell /> : <PreAuthRoutes />}</Router>;
 }

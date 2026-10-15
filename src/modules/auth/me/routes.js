@@ -17,3 +17,6 @@ router.post(
   controller.claimSessao,
 );
 router.delete("/sessao", authSemChecagemDeSessao, controller.releaseSessao);
+
+router.post("/mfa/ativar", auth, controller.ativarMfa);
+router.post("/mfa/desativar", auth, controller.desativarMfa);

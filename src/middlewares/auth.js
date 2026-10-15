@@ -31,13 +31,30 @@ async function autenticar(req) {
     throw new AppError(403, "USUARIO_INATIVO", "Seu acesso foi desativado. Fale com o administrador da sua empresa.");
   }
 
+  // Exige a sessão elevada (aal2) quando o usuário tem 2FA ativo — "aal" vem
+  // assinado dentro do próprio JWT do Supabase, então não precisamos da
+  // service_role key pra checar isso a cada request. Fica aal1 até o
+  // usuário completar o desafio de TOTP (ver web/src/features/auth/
+  // MfaChallengePage.jsx); POST /me/mfa/ativar só liga `mfaAtivo` quando a
+  // sessão que fez a chamada já está em aal2, então nunca travamos sem dar
+  // um jeito de o próprio usuário já ter passado pelo desafio uma vez.
+  if (usuario.mfaAtivo && payload.aal !== "aal2") {
+    throw new AppError(401, "MFA_REQUIRED", "Confirme o código do seu aplicativo autenticador para continuar.");
+  }
+
   req.user = {
     id: usuario.id,
     empresaId: usuario.empresaId,
     role: usuario.role,
     nome: usuario.nome,
     email: usuario.email,
+    mfaAtivo: usuario.mfaAtivo,
   };
+  // Usado só por POST/DELETE /me/mfa (ver src/modules/auth/me/service.js)
+  // pra confirmar que a sessão atual já passou pelo desafio de TOTP antes
+  // de ligar/desligar `mfaAtivo` — sem isso, dava pra ativar o 2FA sem
+  // nunca ter provado que tinha o autenticador configurado de verdade.
+  req.supabaseAal = payload.aal;
 
   // Corta o acesso de TODA a empresa (não só de novos logins) quando a
   // assinatura passou dos 10 dias de carência — ver

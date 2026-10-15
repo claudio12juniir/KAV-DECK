@@ -42,6 +42,7 @@ export function ControleAcessoPage() {
   const [sessoes, setSessoes] = useState([]);
   const [carregandoSessoes, setCarregandoSessoes] = useState(true);
   const [revogandoUsuarioId, setRevogandoUsuarioId] = useState(null);
+  const [desativandoMfa, setDesativandoMfa] = useState(false);
 
   const temAcesso = PAPEIS_COM_ACESSO.includes(me?.role);
 
@@ -125,6 +126,24 @@ export function ControleAcessoPage() {
     }
   }
 
+  // Destrava quem perdeu o aplicativo autenticador e por isso não consegue
+  // mais passar pelo desafio de 2FA sozinho (ver src/middlewares/auth.js,
+  // MFA_REQUIRED) — reaproveita `selecionar` pra recarregar o detalhe com o
+  // badge já atualizado, igual os outros fluxos desta tela.
+  async function desativarMfaDoUsuario() {
+    setDesativandoMfa(true);
+    try {
+      await controleAcessoApi.desativarMfa(usuarioSelecionado.id);
+      toast.success("2FA desativado. O usuário já pode entrar só com a senha.");
+      await carregarUsuarios();
+      await selecionar(usuarioSelecionado);
+    } catch (err) {
+      toast.error(err.message ?? "Não foi possível desativar o 2FA deste usuário.");
+    } finally {
+      setDesativandoMfa(false);
+    }
+  }
+
   async function voltarAoPadrao(acao) {
     const chave = `${acao.modulo}.${acao.acao}`;
     setAcaoEmAndamento(chave);
@@ -156,6 +175,11 @@ export function ControleAcessoPage() {
       key: "ativo",
       label: "Status",
       render: (row) => <Badge tone={row.ativo ? "success" : "neutral"}>{row.ativo ? "Ativo" : "Inativo"}</Badge>,
+    },
+    {
+      key: "mfaAtivo",
+      label: "2FA",
+      render: (row) => <Badge tone={row.mfaAtivo ? "accent" : "neutral"}>{row.mfaAtivo ? "Ativo" : "Desativado"}</Badge>,
     },
   ];
 
@@ -220,6 +244,26 @@ export function ControleAcessoPage() {
           <p style={{ color: "var(--color-text-muted)" }}>
             Sem um ajuste manual abaixo, vale o papel padrão de cada ação.
           </p>
+
+          {detalhe?.usuario.mfaAtivo && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
+                padding: "12px",
+                marginBottom: "16px",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-md, 6px)",
+              }}
+            >
+              <span>Este usuário tem 2FA ativo. Perdeu o acesso ao aplicativo autenticador?</span>
+              <Button variant="danger" size="sm" loading={desativandoMfa} onClick={desativarMfaDoUsuario}>
+                Desativar 2FA
+              </Button>
+            </div>
+          )}
 
           {carregandoDetalhe ? (
             <SkeletonLines count={4} />

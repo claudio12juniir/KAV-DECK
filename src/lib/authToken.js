@@ -23,6 +23,15 @@ export async function verifyAccessToken(token) {
 export async function loadUsuarioFromPayload(payload) {
   return prisma.usuario.findUnique({
     where: { id: payload.sub },
-    select: { id: true, empresaId: true, role: true, ativo: true, nome: true, email: true, ultimoAcessoEm: true },
+    select: {
+      id: true,
+      empresaId: true,
+      role: true,
+      ativo: true,
+      nome: true,
+      email: true,
+      ultimoAcessoEm: true,
+      mfaAtivo: true,
+    },
   });
 }

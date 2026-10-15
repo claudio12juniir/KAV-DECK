@@ -2,7 +2,15 @@ import { prisma } from "../../../lib/prisma.js";
 import { AppError } from "../../../utils/AppError.js";
 import { CATALOGO_PERMISSOES } from "../../../middlewares/permissoesCatalogo.js";
 
-const SELECT_USUARIO = { id: true, nome: true, email: true, role: true, ativo: true, ultimoAcessoEm: true };
+const SELECT_USUARIO = {
+  id: true,
+  nome: true,
+  email: true,
+  role: true,
+  ativo: true,
+  ultimoAcessoEm: true,
+  mfaAtivo: true,
+};
 
 export function listarCatalogo() {
   return CATALOGO_PERMISSOES;
@@ -109,4 +117,18 @@ export async function redefinirSenha({ empresaId, usuarioId, novaSenha }) {
   }
 
   return { redefinida: true };
+}
+
+// Recuperação de quem perdeu o aplicativo autenticador e por isso nunca
+// mais consegue chegar a aal2 sozinho (ver src/middlewares/auth.js e
+// web/src/features/auth/MfaChallengePage.jsx). Só desliga o nosso
+// sinalizador: o fator TOTP continua cadastrado no lado do Supabase (removê-
+// lo de lá exigiria a Admin API, mesma limitação de `redefinirSenha` acima),
+// mas isso é inofensivo — nosso middleware só olha `mfaAtivo`, nunca a lista
+// de fatores do Supabase diretamente. Se o usuário reativar o 2FA depois, o
+// enroll simplesmente cria um fator novo.
+export async function desativarMfa({ empresaId, usuarioId }) {
+  await getUsuarioOrThrow({ empresaId, usuarioId });
+  await prisma.usuario.update({ where: { id: usuarioId }, data: { mfaAtivo: false } });
+  return { mfaAtivo: false };
 }
